@@ -1,0 +1,20 @@
+# Code owners for Repository Architecture Diagramming
+# Each line is a file pattern followed by one or more owners.
+# These owners will be the default assignees for pull requests.
+
+# Default owners for the entire repository
+# * @CSE210-fa25-team09
+
+# Documentation
+# README.md @CSE210-fa25-team09
+# CONTRIBUTING.md @CSE210-fa25-team09
+# LICENSE @CSE210-fa25-team09
+
+# Specifications and design documents
+# /specs/ @CSE210-fa25-team09
+
+# Add specific owners for different areas as needed
+# Example:
+# /src/ @specific-owner
+# /tests/ @test-owner
+
