@@ -109,8 +109,6 @@ Packages
 
 Project Layout
 
-text
-
 `/backend`  
   `├─ src/`  
   `│  ├─ routes/        # REST endpoint handlers`  
