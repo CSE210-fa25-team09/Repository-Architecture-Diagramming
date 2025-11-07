@@ -3,7 +3,7 @@
 **ADR #:** 002  
 **Title:** Frontend Stack: React + Vite + Shadcn/UI  
 **Date:** 2025-11-04  
-**Status:** Proposed
+**Status:** Accepted
 
 ---
 
