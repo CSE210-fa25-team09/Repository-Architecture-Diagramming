@@ -3,7 +3,7 @@
 **ADR #:** 002  
 **Title:** Frontend Stack: React + Vite + Shadcn/UI  
 **Date:** 2025-11-04  
-**Status:** Accepted
+**Status:** Proposed
 
 ---
 
@@ -29,7 +29,7 @@
 We will adopt **React + Vite + TypeScript + Shadcn/UI** as the frontend stack.
 
 - **React** for a **component-based, modular** UI that enables parallel development and reduces merge conflicts.
-- **Vite** for fast dev server, HMR, and optimized builds, ensuring excellent developer feedback cycles and efficient production bundling.
+- **Vite** for fast dev server, HMR, and optimized builds, ensuring excellent developer feedback cycles and efficient production bundling. (detailed in ADR 004)
 - **Shadcn/UI** for accessible, composable **dropdowns, inputs, buttons** with tree-shakable imports.
 - **TypeScript** for maintainability and safer refactoring as the codebase grows.
 
@@ -51,6 +51,11 @@ This address our problems via:
 
   - **Pros**: very light; full control.
   - **Cons**: repetitive primitives (dropdowns/inputs) and accessibility handled manually; inconsistent look without extra discipline.
+
+- **React + Vite + Bootstrap**
+
+  - **Pros**: mature, fast to prototype, widely known.
+  - **Cons**: heavier CSS unless aggressively purged; higher override/specificity maintenance; risk of shipping two styling systems and larger bundles.
 
 ## 4. Consequences
 
