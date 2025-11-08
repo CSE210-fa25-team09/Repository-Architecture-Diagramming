@@ -3,7 +3,7 @@
 **ADR #:** 004  
 **Title:** Build Tool: Vite for Frontend  
 **Date:** 2025-11-07  
-**Status:** Proposed
+**Status:** Accepted
 
 ## 1. Context
 
