@@ -53,7 +53,21 @@ frontend/
 
 Shadcn builds on Radix primitives and Tailwind utilities. Components are copied into `src/components/ui` so you can customize them freely.
 
+### Installed components
+
+- `button` – primary/secondary CTAs (generate diagram, navbar actions)
+- `input` – GitHub URL + repo search fields
+- `label` – helper text like “Sample”/“History”
+- `card` – sample/history repo tiles
+- `dropdown-menu` – navbar environment/user switcher
+- `separator` – subtle dividers (e.g., header vs content)
+- `scroll-area` – scrollable panels when repo lists overflow
+
 ### Adding a component
+
+Please refer to [Shadcn](https://ui.shadcn.com/docs/components) for corresponding component installation guide
+
+eg:
 
 ```bash
 npx shadcn-ui@latest add button
