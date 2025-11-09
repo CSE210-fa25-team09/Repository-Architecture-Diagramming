@@ -1,34 +1,31 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import "./App.css"
+import reactLogo from "./assets/react.svg"
+import viteLogo from "/vite.svg"
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
+    <div className="flex h-screen flex-col items-center justify-center gap-8 px-6 text-center text-slate-900">
+      <div className="flex flex-wrap items-center justify-center gap-6">
+        <a
+          href="https://vite.dev"
+          target="_blank"
+          className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-md transition hover:-translate-y-1 hover:shadow-lg"
+        >
+          <img src={viteLogo} className="h-16 w-16" alt="Vite logo" />
         </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
+        <span className="text-4xl font-light text-slate-400">+</span>
+        <a
+          href="https://react.dev"
+          target="_blank"
+          className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-md transition hover:-translate-y-1 hover:shadow-lg"
+        >
+          <img src={reactLogo} className="h-16 w-16" alt="React logo" />
         </a>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+      <h1 className="text-pretty text-4xl font-semibold tracking-tight text-slate-800 sm:text-5xl">
+        Repository Architecture Diagramming
+      </h1>
+    </div>
   )
 }
 

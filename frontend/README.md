@@ -31,6 +31,8 @@ npm run dev     # start Vite dev server (default http://localhost:5173)
 npm run build   # type-check + production build
 npm run preview # preview the production build locally
 npm run lint    # run ESLint (type-aware rules configured in eslint.config.js)
+npm run test    # Vitest + coverage (watch)
+npm run test:run # Vitest + coverage (single run / CI)
 npm run format  # Prettier write
 npm run format:check # Prettier verify-only
 ```
@@ -46,12 +48,17 @@ frontend/
 │  │  └─ shared/    # project-specific components built on top of Shadcn
 │  ├─ views/        # page-level containers
 │  ├─ utils/        # helpers (Mermaid parsing, data mappers, etc.)
+│  ├─ tests/        # Vitest + Testing Library suites (coverage-enabled)
 │  ├─ App.tsx
 │  └─ main.tsx
 ├─ vite.config.ts
 ├─ tsconfig*.json
 └─ eslint.config.js
 ```
+
+## Testing
+
+Please refer to [testing guide](docs/testing.md) for detailed instruction. Maintain at least **80%** coverage for any new pushed code.
 
 ## UI Library (Shadcn/UI)
 
@@ -92,5 +99,6 @@ npx shadcn-ui@latest add button
 
 - Stack ADR: `specs/adr/ADR_Frontend_Stack_2.md`
 - Build tool ADR: `specs/adr/ADR_Frontend_Build_Tool_4.md`
+- Testing guide: `frontend/docs/testing.md`
 - Vite docs: <https://vitejs.dev/>
 - Shadcn/UI: <https://ui.shadcn.com/>
