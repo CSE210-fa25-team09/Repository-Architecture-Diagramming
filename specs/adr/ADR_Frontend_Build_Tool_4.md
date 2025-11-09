@@ -127,7 +127,7 @@ export default defineConfig({
 ## 6. References
 
 - Internal Design Doc: <https://github.com/CSE210-fa25-team09/Repository-Architecture-Diagramming/tree/main/specs/design>
-- [Frontend Stack ADR](frontendStack.md)
+- [Frontend Stack ADR](ADR_Frontend_Stack_2.md)
 - Vite docs: https://vitejs.dev/
 - React plugin: https://github.com/vitejs/vite/tree/main/packages/plugin-react
 - Vitest: https://vitest.dev/
