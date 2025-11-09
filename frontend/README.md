@@ -31,6 +31,8 @@ npm run dev     # start Vite dev server (default http://localhost:5173)
 npm run build   # type-check + production build
 npm run preview # preview the production build locally
 npm run lint    # run ESLint (type-aware rules configured in eslint.config.js)
+npm run format  # Prettier write
+npm run format:check # Prettier verify-only
 ```
 
 ## Project Layout
@@ -39,7 +41,9 @@ npm run lint    # run ESLint (type-aware rules configured in eslint.config.js)
 frontend/
 ├─ public/          # static assets copied as-is
 ├─ src/
-│  ├─ components/   # shared + Shadcn components
+│  ├─ components/
+│  │  ├─ ui/        # Shadcn-generated primitives (do not edit heavily)
+│  │  └─ shared/    # project-specific components built on top of Shadcn
 │  ├─ views/        # page-level containers
 │  ├─ utils/        # helpers (Mermaid parsing, data mappers, etc.)
 │  ├─ App.tsx
