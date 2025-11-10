@@ -1,9 +1,10 @@
-const { Octokit } = require("@octokit/rest");
+import { Octokit } from "@octokit/rest";
+import fetch from "node-fetch";
 
 // Rate limited to 60 req per hour, without GITHUB_TOKEN _VERY LIMITING_
 const octokit = process.env.GITHUB_TOKEN
-  ? new Octokit({ auth: process.env.GITHUB_TOKEN })
-  : new Octokit();
+  ? new Octokit({ auth: process.env.GITHUB_TOKEN, request: { fetch } })
+  : new Octokit({ request: { fetch } });
 
 
 async function getRepoTree(owner, repo, path = "") {
@@ -30,5 +31,5 @@ async function getRepoTree(owner, repo, path = "") {
   return tree;
 }
 
-module.exports = { getRepoTree };
+export { getRepoTree };
 
