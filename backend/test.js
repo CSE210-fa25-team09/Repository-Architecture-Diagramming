@@ -1,5 +1,5 @@
-require('dotenv').config();
-const { getRepoTree } = require('./src/services/githubService');
+import 'dotenv/config';
+import { getRepoTree } from './src/services/githubService.js';
 
 async function test() {
   const owner = "octocat"; // replace with any public repo
