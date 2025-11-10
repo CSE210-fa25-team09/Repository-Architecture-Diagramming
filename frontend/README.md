@@ -81,7 +81,7 @@ Please refer to [Shadcn](https://ui.shadcn.com/docs/components) for correspondin
 eg:
 
 ```bash
-npx shadcn-ui@latest add button
+npx shadcn@latest add button
 ```
 
 - Keep generated files under `src/components/ui`.
