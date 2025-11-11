@@ -24,7 +24,7 @@ jobs:
         working-directory: ./frontend
         run: |
             # run vitest with coverage
-            npm run test -- --coverage
+            npm run test
 
             # coverage/coverage-summary.json is created because of json-summary reporter
             COVERAGE=$(jq '.total.lines.pct' coverage/coverage-summary.json)
