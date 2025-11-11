@@ -10,7 +10,7 @@ export default defineConfig([
   {
     name: "syntax-rules",
 		rules: {
-			semi: "error",
+			semi: "warn",
 		},
 	},
 
