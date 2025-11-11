@@ -45,9 +45,21 @@ The mockup is generated using **Codex (LLM)** to bootstrap the initial layout, g
 
 - Cards are vertically expandable.
 
-## 3. Style Consolidation
+## 3. Alternatives Considered
 
-### 3.1 Theme + tokens
+- **History presentation**: prototype a carousel treatment for the history section so users can scan more past diagrams without scrolling.
+  - **Pros**: surfaces more artifacts within the same vertical space; draws attention to history without forcing users to leave the hero area; interaction can feel modern when animated smoothly.
+  - **Cons**: carousel controls add complexity for keyboard/mobile accessibility; users may overlook older items because only a subset is visible at any moment; engineering effort increases if cards need lazy loading.
+- **Search visibility**: explore keeping the Example and History sections visible even after search results load, relying on emphasis states instead of hiding content.
+  - **Pros**: avoids jarring layout shifts when results appear; keeps contextual examples available for cross-checking styling or scope; simplifies state management because sections do not toggle on/off.
+  - **Cons**: viewport can feel crowded, especially on smaller screens; results compete for visual hierarchy with static sections; may require more nuanced focus handling for screen readers.
+- **Navbar controls**: evaluate whether the navbar should still include a dedicated theme toggle button or if theme selection can move elsewhere.
+  - **Pros**: removing the toggle declutters the navbar and reserves space for future nav items; centralizing theme control can align with broader app preferences.
+  - **Cons**: users lose immediate access to theme switching, which is valuable during demos; burying the control increases clicks and hurts discoverability
+
+## 4. Style Consolidation
+
+### 4.1 Theme + tokens
 
 - All colors are CSS variables declared in `src/index.css`. Use them through Tailwind arbitrary values (`bg-[var(--panel-bg)]`, `text-[color:var(--muted-text)]`, etc.).
 - Core palette (light / dark):
@@ -72,7 +84,7 @@ The mockup is generated using **Codex (LLM)** to bootstrap the initial layout, g
 | `--card-border`               | `#d0d7de` | `#30363d` | Tile border            |
 | `--card-hover`                | `#f0f3f6` | `#1f242d` | Tile hover surface     |
 
-### 3.2 Typography & line height
+### 4.2 Typography & line height
 
 - Font: Tailwind system sans.
 - Titles: `text-2xl font-semibold`, `leading-tight`.
@@ -81,14 +93,14 @@ The mockup is generated using **Codex (LLM)** to bootstrap the initial layout, g
 - Supporting body text: `text-sm text-[var(--muted-text)]`.
 - Buttons: `text-base` for primaries, `text-sm` for secondary/utility actions.
 
-### 3.3 Border radii (Tailwind)
+### 4.3 Border radii (Tailwind)
 
 - Panels/cards/logo badge: `rounded-xl`.
 - Repo cards: `rounded-2xl`.
 - Primary buttons: `rounded-full`.
 - Inputs (rectangular): `rounded-md`; search field uses `rounded-full`.
 
-### 3.4 Component Map (shadcn equivalents)
+### 4.4 Component Map (shadcn equivalents)
 
 | UI element                                                                 | Shadcn component(s)                                   |
 | -------------------------------------------------------------------------- | ----------------------------------------------------- |
@@ -99,7 +111,7 @@ The mockup is generated using **Codex (LLM)** to bootstrap the initial layout, g
 | Text inputs (URL + Search)                                                 | `Input`                                               |
 | Repo cards                                                                 | `Card`, `CardContent`, `CardTitle`, `CardDescription` |
 
-## 4. References
+## 5. References
 
 - Internal Design Doc: <https://github.com/CSE210-fa25-team09/Repository-Architecture-Diagramming/tree/main/specs/design>
 - Figma Design Doc: <https://www.figma.com/board/zMKsfe6XcEK68TerPIorgZ/Design-Doc?node-id=0-1&p=f&t=xqeRV5aOvZVMD0qk-0>
