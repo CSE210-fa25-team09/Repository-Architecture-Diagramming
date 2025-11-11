@@ -1,0 +1,166 @@
+// File contains sample software engineering diagrams to display in the frontend
+[
+    {
+      "project_name": "VS Code",
+      "repo_name": "microsoft/vscode",
+      "branch_name": "main",
+      "url": "https://github.com/microsoft/vscode",
+      "description": "Visual Studio Code - Open source code editor developed by Microsoft.",
+      "diagram_image_link": "./data/vscode.png",
+      "file_structure": {
+        "root": {
+          "README.md": null,
+          "package.json": null,
+          "src": {
+            "vs": {
+              "base": {
+                "common": {
+                  "types.ts": null,
+                  "actions.ts": null
+                }
+              }
+            }
+          },
+          "extensions": {
+            "markdown-language-features": {
+              "src": {
+                "extension.ts": null
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "project_name": "Bootstrap",
+      "repo_name": "twbs/bootstrap",
+      "branch_name": "main",
+      "url": "https://github.com/twbs/bootstrap",
+      "description": "The most popular HTML, CSS, and JS library for developing responsive, mobile first projects on the web.",
+      "diagram_image_link": "./data/bootstrap.png",
+      "file_structure": {
+        "root": {
+          "README.md": null,
+          "package.json": null,
+          "scss": {
+            "_variables.scss": null,
+            "_grid.scss": null,
+            "mixins": {
+              "_breakpoints.scss": null
+            }
+          },
+          "js": {
+            "modal.js": null,
+            "tooltip.js": null
+          }
+        }
+      }
+    },
+    {
+      "project_name": "API Analytics",
+      "repo_name": "tom-draper/api-analytics",
+      "branch_name": "main",
+      "url": "https://github.com/tom-draper/api-analytics",
+      "description": "Effortless monitoring and analytics for API frameworks.",
+      "diagram_image_link": "./data/api_analytics.png",
+      "file_structure": {
+        "root": {
+          "README.md": null,
+          "LICENSE": null,
+          "package.json": null,
+          "analytics": {
+            "go": {
+              "gin": {
+                "analytics.go": null
+              }
+            },
+            "python": {
+              "fastapi": {
+                "analytics.py": null
+              }
+            }
+          },
+          "examples": {
+            "fastapi_example.py": null,
+            "express_example.js": null
+          },
+          "dashboard": {
+            "app": {
+              "routes": {
+                "index.js": null
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "project_name": "Prettier",
+      "repo_name": "prettier/prettier",
+      "branch_name": "main",
+      "url": "https://github.com/prettier/prettier",
+      "description": "Prettier is an opinionated code formatter for JavaScript, TypeScript, CSS, HTML, and more.",
+      "diagram_image_link": "./data/prettier.png",
+      "file_structure": {
+        "root": {
+          "README.md": null,
+          "package.json": null,
+          "bin-prettier.js": null,
+          "src": {
+            "main": {
+              "index.js": null
+            },
+            "language-js": {
+              "parser-js.js": null,
+              "printer-estree.js": null
+            },
+            "language-css": {
+              "parser-postcss.js": null
+            },
+            "common": {
+              "options.js": null
+            }
+          },
+          "website": {
+            "pages": {
+              "index.js": null
+            }
+          }
+        }
+      }
+    },
+    {
+      "project_name": "Lodash",
+      "repo_name": "lodash/lodash",
+      "branch_name": "master",
+      "url": "https://github.com/lodash/lodash",
+      "description": "A modern JavaScript utility library delivering modularity, performance & extras.",
+      "diagram_image_link": "./data/lodash.png",
+      "file_structure": {
+        "root": {
+          "README.md": null,
+          "package.json": null,
+          "lodash.js": null,
+          "docs": {
+            "README.md": null,
+            "methods.md": null
+          },
+          "perf": {
+            "perf.js": null,
+            "tests.js": null
+          },
+          "scripts": {
+            "build.js": null,
+            "doc.js": null
+          },
+          "test": {
+            "test.js": null
+          },
+          "tpl": {
+            "lodash.tpl.js": null
+          }
+        }
+      }
+    }
+]
+  
