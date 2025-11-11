@@ -1,0 +1,15 @@
+name: Testing Workflow
+
+on: [push]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Dependencies 
+        working-directory: ./frontend
+        run: npm ci
+      - name: Run Frontend Unit Tests
+        working-directory: ./frontend
+        run: npm run test
