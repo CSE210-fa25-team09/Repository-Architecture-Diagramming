@@ -1,30 +1,42 @@
-import "./App.css"
-import reactLogo from "./assets/react.svg"
-import viteLogo from "/vite.svg"
+import { useEffect, useState } from "react"
+import { Route, Routes } from "react-router-dom"
+
+import { Header } from "./components/shared/Header"
+import { Separator } from "./components/ui/separator"
+import { getSystemTheme, type Theme } from "./lib/utils"
+import { Home } from "./pages/Home"
+import { NotFound } from "./pages/NotFound"
 
 function App() {
+  const [theme, setTheme] = useState<Theme>(() => getSystemTheme())
+  const isDark = theme === "dark"
+
+  // Sync with system preference so the UI stays in step with OS theme toggles.
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)")
+    const listener = (event: MediaQueryListEvent) =>
+      setTheme(event.matches ? "dark" : "light")
+    media.addEventListener("change", listener)
+    return () => media.removeEventListener("change", listener)
+  }, [])
+
   return (
-    <div className="flex h-screen flex-col items-center justify-center gap-8 px-6 text-center text-slate-900">
-      <div className="flex flex-wrap items-center justify-center gap-6">
-        <a
-          href="https://vite.dev"
-          target="_blank"
-          className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-md transition hover:-translate-y-1 hover:shadow-lg"
-        >
-          <img src={viteLogo} className="h-16 w-16" alt="Vite logo" />
-        </a>
-        <span className="text-4xl font-light text-slate-400">+</span>
-        <a
-          href="https://react.dev"
-          target="_blank"
-          className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-md transition hover:-translate-y-1 hover:shadow-lg"
-        >
-          <img src={reactLogo} className="h-16 w-16" alt="React logo" />
-        </a>
+    <div className={isDark ? "dark" : ""}>
+      <div className="min-h-screen bg-[var(--page-bg)] text-[var(--page-foreground)] transition-colors">
+        <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-8 px-4 py-8">
+          <Header
+            isDark={isDark}
+            onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
+          />
+
+          <Separator className="bg-[color:var(--panel-border)]" />
+
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </div>
       </div>
-      <h1 className="text-pretty text-4xl font-semibold tracking-tight text-slate-800 sm:text-5xl">
-        Repository Architecture Diagramming
-      </h1>
     </div>
   )
 }

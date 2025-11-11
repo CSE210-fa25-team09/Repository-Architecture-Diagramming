@@ -43,6 +43,29 @@
 
 :root {
   --radius: 0.625rem;
+
+  /* GitHub-inspired light tokens */
+  --page-bg: #f6f8fa;
+  --page-foreground: #1f2328;
+  --panel-bg: #ffffff;
+  --panel-border: #d0d7de;
+  --muted-text: #57606a;
+  --icon-muted: #6e7781;
+  --input-bg: #f6f8fa;
+  --input-border: #d0d7de;
+  --input-placeholder: #8c959f;
+  --primary-action: #1f883d;
+  --primary-action-foreground: #ffffff;
+  --secondary-action-bg: #24292f;
+  --secondary-action-foreground: #ffffff;
+  --card-bg: #ffffff;
+  --card-border: #d0d7de;
+  --card-hover: #f0f3f6;
+  --focus-ring: rgba(31, 136, 61, 0.3);
+  --btn-primary-bg: #1f883d;
+  --btn-primary-hover: #1c8139;
+  --btn-primary-active: #197935;
+
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -77,6 +100,27 @@
 }
 
 .dark {
+  --page-bg: #0d1117;
+  --page-foreground: #e6edf3;
+  --panel-bg: #161b22;
+  --panel-border: #30363d;
+  --muted-text: #8b949e;
+  --icon-muted: #8b949e;
+  --input-bg: #0d1117;
+  --input-border: #30363d;
+  --input-placeholder: #8b949e;
+  --primary-action: #2ea043;
+  --primary-action-foreground: #0d1117;
+  --secondary-action-bg: #f6f8fa;
+  --secondary-action-foreground: #0d1117;
+  --card-bg: #161b22;
+  --card-border: #30363d;
+  --card-hover: #1f242d;
+  --focus-ring: rgba(56, 139, 253, 0.45);
+  --btn-primary-bg: #197935;
+  --btn-primary-hover: #1c8139;
+  --btn-primary-active: #1f883d;
+
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
