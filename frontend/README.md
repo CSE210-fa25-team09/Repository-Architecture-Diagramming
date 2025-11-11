@@ -100,5 +100,6 @@ npx shadcn@latest add button
 - Stack ADR: `specs/adr/ADR_Frontend_Stack_2.md`
 - Build tool ADR: `specs/adr/ADR_Frontend_Build_Tool_4.md`
 - Testing guide: `frontend/docs/testing.md`
+- Style decisions: `frontend/docs/style-decisions.md`
 - Vite docs: <https://vitejs.dev/>
 - Shadcn/UI: <https://ui.shadcn.com/>
