@@ -45,10 +45,10 @@ jobs:
       - name: Create the Badge
         uses: schneegans/dynamic-badges-action@v1.0.0
         with:
-          auth: ${{ secrets.GIST_SECRET }}
-          gistID: 950ea96d8c81479a2fc3e12d3ca71532
-          filename: Repository-Architecture-Diagramming__${{ env.BRANCH }}.json
-          label: Test Coverage
-          message: ${{ env.COVERAGE }}
-          color: green
-          namedLogo: jest
+            auth: ${{ secrets.GIST_SECRET }}
+            gistID: 950ea96d8c81479a2fc3e12d3ca71532
+            filename: Repository-Architecture-Diagramming__${{ env.BRANCH }}.json
+            label: Frontend Test Coverage
+            message: ${{ env.COVERAGE }}
+            color: green
+            namedLogo: jest 
