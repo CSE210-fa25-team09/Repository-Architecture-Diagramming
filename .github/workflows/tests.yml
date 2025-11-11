@@ -1,0 +1,54 @@
+name: Testing Workflow
+
+on: [push]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+            node-version: '24'
+            cache: 'npm'
+      - name: Install Dependencies 
+        working-directory: ./frontend
+        run: npm ci
+      - name: Run Frontend Unit Tests
+        working-directory: ./frontend
+        run: npm run test
+
+        #coverage badge for github actions
+        #source: https://dev.to/thejaredwilcurt/coverage-badge-with-github-actions-finally-59fa
+      - name: Get Coverage for badge
+        working-directory: ./frontend
+        run: |
+            # run vitest with coverage
+            npm run test
+
+            # coverage/coverage-summary.json is created because of json-summary reporter
+            COVERAGE=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+            echo "COVERAGE=${COVERAGE}%" >> $GITHUB_ENV
+
+            # var REF = 'refs/pull/27/merge.json';
+            REF=${{ github.ref }}
+            # console.log('github.ref: ' + REF);
+            echo "github.ref: $REF"
+            # var PATHS = REF.split('/');
+            IFS='/' read -ra PATHS <<< "$REF"
+            # var BRANCH_NAME = PATHS[1] + '_' + PATHS[2];
+            BRANCH_NAME="${PATHS[1]}_${PATHS[2]}"
+            # console.log(BRANCH_NAME); // 'pull_27'
+            echo $BRANCH_NAME
+            # process.env.BRANCH = 'pull_27';
+            echo "BRANCH=$(echo ${BRANCH_NAME})" >> $GITHUB_ENV
+      - name: Create the Badge
+        uses: schneegans/dynamic-badges-action@v1.0.0
+        with:
+            auth: ${{ secrets.GIST_SECRET }}
+            gistID: 950ea96d8c81479a2fc3e12d3ca71532
+            filename: Repository-Architecture-Diagramming__${{ env.BRANCH }}.json
+            label: Frontend Test Coverage
+            message: ${{ env.COVERAGE }}
+            color: green
+            namedLogo: jest 
