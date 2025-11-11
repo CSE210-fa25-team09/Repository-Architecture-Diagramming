@@ -48,7 +48,7 @@ jobs:
             auth: ${{ secrets.GIST_SECRET }}
             gistID: 950ea96d8c81479a2fc3e12d3ca71532
             filename: Repository-Architecture-Diagramming__${{ env.BRANCH }}.json
-            label: Test Coverage
+            label: Frontend Test Coverage
             message: ${{ env.COVERAGE }}
             color: green
             namedLogo: jest 
