@@ -21,6 +21,7 @@ jobs:
         #coverage badge for github actions
         #source: https://dev.to/thejaredwilcurt/coverage-badge-with-github-actions-finally-59fa
       - name: Get Coverage for badge
+        working-directory: ./frontend
         run: |
             # var SUMMARY = [
             #   '',
@@ -34,7 +35,7 @@ jobs:
             # ];
             # SUMMARY = SUMMARY.split('\n')[5]; // 'Lines        : 31.93% ( 38/119 )'
             # SUMMARY = SUMMARY.split(':')[1].split('(')[0].trim(); // '31.93%'
-            SUMMARY="$(npm test -- --coverageReporters='text-summary' | tail -2 | head -1)"
+            SUMMARY="$(npm run test -- --coverageReporters='text-summary' | tail -2 | head -1)"
             TOKENS=($SUMMARY)
             # process.env.COVERAGE = '31.93%';
             echo "COVERAGE=$(echo ${TOKENS[2]})" >> $GITHUB_ENV
