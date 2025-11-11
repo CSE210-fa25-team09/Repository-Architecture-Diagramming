@@ -23,22 +23,12 @@ jobs:
       - name: Get Coverage for badge
         working-directory: ./frontend
         run: |
-            # var SUMMARY = [
-            #   '',
-            #   '=============================== Coverage summary ===============================',
-            #   'Statements   : 32.5% ( 39/120 )',
-            #   'Branches     : 38.89% ( 21/54 )',
-            #   'Functions    : 21.74% ( 5/23 )',
-            #   'Lines        : 31.93% ( 38/119 )',
-            #   '================================================================================',
-            #   ''
-            # ];
-            # SUMMARY = SUMMARY.split('\n')[5]; // 'Lines        : 31.93% ( 38/119 )'
-            # SUMMARY = SUMMARY.split(':')[1].split('(')[0].trim(); // '31.93%'
-            SUMMARY="$(npm run test -- --coverageReporters='text-summary' | tail -2 | head -1)"
-            TOKENS=($SUMMARY)
-            # process.env.COVERAGE = '31.93%';
-            echo "COVERAGE=$(echo ${TOKENS[2]})" >> $GITHUB_ENV
+            # run vitest with coverage
+            npm run test -- --coverage
+
+            # coverage/coverage-summary.json is created because of json-summary reporter
+            COVERAGE=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+            echo "COVERAGE=${COVERAGE}%" >> $GITHUB_ENV
 
             # var REF = 'refs/pull/27/merge.json';
             REF=${{ github.ref }}
