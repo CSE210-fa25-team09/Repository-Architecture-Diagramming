@@ -1,3 +1,6 @@
+<!-- Change the ## to your pull request number -->
+![Coverage Badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/<elaine-ch>/<g950ea96d8c81479a2fc3e12d3ca71532>/raw/<Repository-Architecture-Diagramming>__pull_##.json)
+
 ## Description
 <!-- Provide a clear and concise description of what this PR does -->
 
