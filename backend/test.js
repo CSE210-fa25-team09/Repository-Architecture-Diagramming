@@ -51,7 +51,7 @@ async function testGetAllBranches() {
   }
 }
 
-// testGetAllBranches();
-// testGetDefaultRepoTree();
-// testGetRepoTreeWithBranch();
+testGetAllBranches();
+testGetDefaultRepoTree();
+testGetRepoTreeWithBranch();
 testGetFileContent();
