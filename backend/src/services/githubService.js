@@ -6,8 +6,8 @@ const octokit = process.env.GITHUB_TOKEN
   : new Octokit();
 
 
-async function getRepoTree(owner, repo, path = "") {
-  const { data } = await octokit.repos.getContent({ owner, repo, path });
+async function getRepoTree(owner, repo, path = "", branch = "") {
+  const { data } = await octokit.repos.getContent({ owner, repo, path, ref: branch });
 
   // console.log(data)
 
@@ -17,7 +17,7 @@ async function getRepoTree(owner, repo, path = "") {
         return {
           name: item.name,
           type: "dir",
-          children: await getRepoTree(owner, repo, item.path)
+          children: await getRepoTree(owner, repo, item.path, branch)
         };
       } else {
         return {
@@ -30,5 +30,30 @@ async function getRepoTree(owner, repo, path = "") {
   return tree;
 }
 
-export { getRepoTree };
+async function getFileContent(owner, repo, path, branch = "") {
+  const { data } = await octokit.repos.getContent({ owner, repo, path, ref: branch });
+  if (data.type === "file") {
+    const content = Buffer.from(data.content, 'base64').toString('utf-8');
+    return content;
+  } else {
+    throw new Error("Path is not a file");
+  }
+}
+
+async function getAllBranches(owner, repo) {
+  const branches = await octokit.paginate(octokit.repos.listBranches, {
+    owner,
+    repo,
+    per_page: 100
+  });
+  return branches.map(branch => branch.name);
+}
+
+const githubService = {
+  getRepoTree,
+  getFileContent,
+  getAllBranches
+};
+
+export default githubService;
 
