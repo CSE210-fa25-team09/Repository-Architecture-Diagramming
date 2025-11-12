@@ -40,12 +40,7 @@ async function getRepoTree(owner, repo, path = "", ref = "") {
 }
 
 async function getFile(owner, repo, path, branch = "") {
-  const { data } = await octokit.repos.getContent({ 
-    "owner": owner, 
-    "repo": repo, 
-    "path": path, 
-    "ref": branch
-  });
+  const data = await getContent(owner, repo, path, branch);
   if (data.type === "file") {
     // Decode base64 content
     const content = Buffer.from(data.content, 'base64').toString('utf-8');
