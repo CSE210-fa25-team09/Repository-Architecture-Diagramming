@@ -1,3 +1,6 @@
+<!-- Change the <branch> to your branch name (no <> tags) -->
+![Coverage Badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/elaine-ch/950ea96d8c81479a2fc3e12d3ca71532/raw/Repository-Architecture-Diagramming__heads_<branch>.json)
+
 ## Description
 <!-- Provide a clear and concise description of what this PR does -->
 
