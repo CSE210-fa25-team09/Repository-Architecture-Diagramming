@@ -6,6 +6,7 @@ import path from 'path';
 
 function extractCodeFiles(tree) {
   const codeFiles = [];
+  // JavaScript/TypeScript file extensions
   const exts = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs'];
   
   function traverse(nodes, currentPath = '') {
@@ -25,7 +26,7 @@ function extractCodeFiles(tree) {
 }
 
 async function analyzeDependenciesJS() {
-  // Analyze our own project!
+  // Analyze our own project
   const owner = 'CSE210-fa25-team09', repo = 'Repository-Architecture-Diagramming', branch = 'main', maxFiles = null;
   
   console.log(`\nAnalyzing: ${owner}/${repo} (${branch})${maxFiles ? `, max ${maxFiles} files` : ' (all files)'}\n`);
@@ -40,10 +41,9 @@ async function analyzeDependenciesJS() {
     const parsedFiles = [];
     for (const filePath of filesToAnalyze) {
       const content = await githubService.getFile(owner, repo, filePath, branch);
-      const parsed = dependencyAnalyzer.parseJavaScriptFile(content, filePath);
+      const parsed = dependencyAnalyzer.parseFile(content, filePath); // Auto-detects language
       parsedFiles.push(parsed);
       
-      const stats = parsed.dependencies.reduce((acc, d) => (acc[d.type] = (acc[d.type] || 0) + 1, acc), {});
       console.log(`✓ ${filePath} (${parsed.dependencies.length} deps)`);
     }
     
@@ -67,4 +67,79 @@ async function analyzeDependenciesJS() {
   }
 }
 
-analyzeDependenciesJS();
+function extractCppFiles(tree) {
+  const codeFiles = [];
+  // C/C++ file extensions
+  const exts = ['.cpp', '.cc', '.cxx', '.c', '.h', '.hpp', '.hxx'];
+  
+  function traverse(nodes, currentPath = '') {
+    if (!Array.isArray(nodes)) return;
+    nodes.forEach(node => {
+      const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
+      if (node.type === 'file' && exts.includes(node.name.substring(node.name.lastIndexOf('.')))) {
+        codeFiles.push(fullPath);
+      } else if (node.type === 'dir' && node.children) {
+        traverse(node.children, fullPath);
+      }
+    });
+  }
+  
+  traverse(tree);
+  return codeFiles;
+}
+
+async function analyzeDependenciesCpp() {
+  // Small C++ projects for full analysis:
+  // const owner = 'nlohmann', repo = 'json', branch = 'develop', maxFiles = null; // 481 files - too big
+  const owner = 'jarro2783', repo = 'cxxopts', branch = 'master', maxFiles = null; // ~20-30 files - perfect size
+  
+  console.log(`\nAnalyzing C++ project: ${owner}/${repo} (${branch})${maxFiles ? `, max ${maxFiles} files` : ' (all files)'}\n`);
+  
+  try {
+    const tree = await githubService.getRepoTree(owner, repo, '', branch);
+    const allCodeFiles = extractCppFiles(tree);
+    const filesToAnalyze = maxFiles ? allCodeFiles.slice(0, maxFiles) : allCodeFiles;
+    
+    console.log(`Found ${allCodeFiles.length} C++ files, analyzing ${filesToAnalyze.length}\n`);
+    
+    const parsedFiles = [];
+    for (const filePath of filesToAnalyze) {
+      const content = await githubService.getFile(owner, repo, filePath, branch);
+      const parsed = dependencyAnalyzer.parseFile(content, filePath);
+      parsedFiles.push(parsed);
+      
+      const stats = parsed.dependencies.reduce((acc, d) => (acc[d.type] = (acc[d.type] || 0) + 1, acc), {});
+      console.log(`✓ ${filePath} (${parsed.dependencies.length} deps: ${stats.internal || 0} int, ${stats.external || 0} ext, ${stats.builtin || 0} std)`);
+    }
+    
+    const graphJSON = dependencyAnalyzer.exportDependencyGraphJSON(parsedFiles);
+    
+    const outputDir = path.join(process.cwd(), 'dependency_graphs');
+    await fs.mkdir(outputDir, { recursive: true });
+    
+    const commitSha = await githubService.getLatestCommit(owner, repo, branch);
+    const filename = `${repo}_${branch}_${commitSha}.json`;
+    const outputPath = path.join(outputDir, filename);
+    
+    await fs.writeFile(outputPath, JSON.stringify(graphJSON, null, 2), 'utf-8');
+    
+    console.log(`\n✅ Saved: ${outputPath}`);
+    console.log(`Nodes: ${graphJSON.nodes.length}, Edges: ${Object.values(graphJSON.dependencies).reduce((s, d) => s + d.length, 0)}\n`);
+    
+  } catch (err) {
+    console.error('❌ Error:', err.message);
+  }
+}
+
+// Command-line argument handling
+const testType = process.argv[2]?.toUpperCase() || 'JS';
+
+if (testType === 'JS') {
+  analyzeDependenciesJS();
+} else if (testType === 'CPP') {
+  analyzeDependenciesCpp();
+} else {
+  console.log('Valid options: JS (default), CPP');
+  console.log('Usage: node test_dependency.js [JS|CPP]');
+  process.exit(1);
+}

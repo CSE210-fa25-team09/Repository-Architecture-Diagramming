@@ -27,6 +27,47 @@ function parseJavaScriptFile(content, filePath) {
   return { filePath, dependencies };
 }
 
+function parseCppFile(content, filePath) {
+  const dependencies = [];
+  
+  // Match #include <header> (system headers)
+  const systemIncludeRegex = /#include\s*<([^>]+)>/g;
+  let match;
+  
+  while ((match = systemIncludeRegex.exec(content)) !== null) {
+    dependencies.push({
+      module: match[1],
+      type: 'builtin' // System/standard library headers
+    });
+  }
+  
+  // Match #include "header" (local/project headers)
+  const localIncludeRegex = /#include\s*"([^"]+)"/g;
+  
+  while ((match = localIncludeRegex.exec(content)) !== null) {
+    const header = match[1];
+    dependencies.push({
+      module: header,
+      type: header.startsWith('.') || header.includes('/') ? 'internal' : 'external'
+    });
+  }
+  
+  return { filePath, dependencies };
+}
+
+// Main parser that detects file type and uses appropriate parser
+function parseFile(content, filePath) {
+  const ext = filePath.substring(filePath.lastIndexOf('.'));
+  
+  // C/C++ files
+  if (['.cpp', '.cc', '.cxx', '.c', '.h', '.hpp', '.hxx'].includes(ext)) {
+    return parseCppFile(content, filePath);
+  }
+  
+  // JavaScript/TypeScript files (default)
+  return parseJavaScriptFile(content, filePath);
+}
+
 function classifyDependency(moduleName) {
   if (moduleName.startsWith('.')) return 'internal';
   
@@ -57,7 +98,31 @@ function resolveImportPath(sourcePath, importPath, fileSet) {
   }
   
   const basePath = parts.join('/');
-  const possiblePaths = [basePath + '.js', basePath + '/index.js', basePath + '.ts', basePath + '/index.ts'];
+  
+  // Try different extensions based on source file type
+  const sourceExt = sourcePath.substring(sourcePath.lastIndexOf('.'));
+  let possiblePaths = [];
+  
+  if (['.cpp', '.cc', '.cxx', '.c', '.h', '.hpp', '.hxx'].includes(sourceExt)) {
+    // C++ file extensions
+    possiblePaths = [
+      basePath + '.h',
+      basePath + '.hpp',
+      basePath + '.hxx',
+      basePath + '.cpp',
+      basePath + '.cc',
+      basePath + '.cxx',
+      basePath + '.c'
+    ];
+  } else {
+    // JavaScript/TypeScript extensions
+    possiblePaths = [
+      basePath + '.js',
+      basePath + '/index.js',
+      basePath + '.ts',
+      basePath + '/index.ts'
+    ];
+  }
   
   for (const p of possiblePaths) {
     if (fileSet.has(p)) return p;
@@ -73,7 +138,7 @@ function exportDependencyGraphJSON(parsedFiles) {
   
   parsedFiles.forEach(file => {
     if (!nodeSet.has(file.filePath)) {
-      nodes.push(file.filePath);
+      nodes.push({ name: file.filePath, type: 'code' });
       nodeSet.add(file.filePath);
       dependencyMap[file.filePath] = [];
     }
@@ -87,7 +152,7 @@ function exportDependencyGraphJSON(parsedFiles) {
         const resolvedTarget = resolveImportPath(file.filePath, dep.module, fileSet);
         if (resolvedTarget && fileSet.has(resolvedTarget)) {
           if (!nodeSet.has(resolvedTarget)) {
-            nodes.push(resolvedTarget);
+            nodes.push({ name: resolvedTarget, type: 'code' });
             nodeSet.add(resolvedTarget);
             dependencyMap[resolvedTarget] = [];
           }
@@ -95,7 +160,10 @@ function exportDependencyGraphJSON(parsedFiles) {
         }
       } else if (dep.type === 'external' || dep.type === 'builtin') {
         if (!nodeSet.has(dep.module)) {
-          nodes.push(dep.module);
+          nodes.push({ 
+            name: dep.module, 
+            type: dep.type === 'builtin' ? 'builtin' : 'external' 
+          });
           nodeSet.add(dep.module);
           dependencyMap[dep.module] = [];
         }
@@ -109,5 +177,7 @@ function exportDependencyGraphJSON(parsedFiles) {
 
 export default {
   parseJavaScriptFile,
+  parseCppFile,
+  parseFile,
   exportDependencyGraphJSON
 };
