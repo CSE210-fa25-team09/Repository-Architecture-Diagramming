@@ -6,70 +6,33 @@ import {
   getLanguageFromExtension
 } from '../config/parserConfig.js';
 
+// Helper to add unique dependencies
+function addDependency(dependencies, seen, module, type) {
+  if (!seen.has(module)) {
+    dependencies.push({ module, type });
+    seen.add(module);
+  }
+}
+
 function parseJSTSFile(content, filePath) {
   const dependencies = [];
-  const seen = new Set(); // Avoid duplicates
-  let match;
+  const seen = new Set();
   
-  // Parse require() statements
-  while ((match = REGEX_PATTERNS.jsts.require.exec(content)) !== null) {
-    const moduleName = match[1];
-    if (!seen.has(moduleName)) {
-      dependencies.push({
-        module: moduleName,
-        type: classifyJstsDependency(moduleName)
-      });
-      seen.add(moduleName);
-    }
-  }
+  // Parse all import patterns
+  const patterns = [
+    REGEX_PATTERNS.jsts.require,
+    REGEX_PATTERNS.jsts.import,
+    REGEX_PATTERNS.jsts.dynamicImport,
+    REGEX_PATTERNS.jsts.exportFrom,
+    REGEX_PATTERNS.jsts.tripleSlash
+  ];
   
-  // Parse import statements (including type-only imports)
-  while ((match = REGEX_PATTERNS.jsts.import.exec(content)) !== null) {
-    const moduleName = match[1];
-    if (!seen.has(moduleName)) {
-      dependencies.push({
-        module: moduleName,
-        type: classifyJstsDependency(moduleName)
-      });
-      seen.add(moduleName);
+  patterns.forEach(pattern => {
+    let match;
+    while ((match = pattern.exec(content)) !== null) {
+      addDependency(dependencies, seen, match[1], classifyJstsDependency(match[1]));
     }
-  }
-  
-  // Parse dynamic imports: import('module')
-  while ((match = REGEX_PATTERNS.jsts.dynamicImport.exec(content)) !== null) {
-    const moduleName = match[1];
-    if (!seen.has(moduleName)) {
-      dependencies.push({
-        module: moduleName,
-        type: classifyJstsDependency(moduleName)
-      });
-      seen.add(moduleName);
-    }
-  }
-  
-  // Parse export from: export { X } from 'module'
-  while ((match = REGEX_PATTERNS.jsts.exportFrom.exec(content)) !== null) {
-    const moduleName = match[1];
-    if (!seen.has(moduleName)) {
-      dependencies.push({
-        module: moduleName,
-        type: classifyJstsDependency(moduleName)
-      });
-      seen.add(moduleName);
-    }
-  }
-  
-  // Parse TypeScript triple-slash directives: /// <reference path="..." />
-  while ((match = REGEX_PATTERNS.jsts.tripleSlash.exec(content)) !== null) {
-    const moduleName = match[1];
-    if (!seen.has(moduleName)) {
-      dependencies.push({
-        module: moduleName,
-        type: classifyJstsDependency(moduleName)
-      });
-      seen.add(moduleName);
-    }
-  }
+  });
   
   return { filePath, dependencies };
 }
@@ -130,9 +93,9 @@ function parseJavaFile(content, filePath) {
 function parseGoFile(content, filePath) {
   const dependencies = [];
   const importedPackages = new Set();
-  let match;
   
   // Parse single-line imports: import "package"
+  let match;
   while ((match = REGEX_PATTERNS.go.import.exec(content)) !== null) {
     importedPackages.add(match[1]);
   }
@@ -147,12 +110,12 @@ function parseGoFile(content, filePath) {
   }
   
   // Classify each imported package
-  for (const packagePath of importedPackages) {
+  importedPackages.forEach(packagePath => {
     dependencies.push({
       module: packagePath,
       type: classifyGoDependency(packagePath)
     });
-  }
+  });
   
   return { filePath, dependencies };
 }
@@ -301,38 +264,32 @@ function exportDependencyGraphJSON(parsedFiles) {
   const nodes = [];
   const nodeSet = new Set();
   const dependencyMap = {};
-  
-  parsedFiles.forEach(file => {
-    if (!nodeSet.has(file.filePath)) {
-      nodes.push({ name: file.filePath, type: 'code' });
-      nodeSet.add(file.filePath);
-      dependencyMap[file.filePath] = [];
-    }
-  });
-  
   const fileSet = new Set(parsedFiles.map(f => f.filePath));
   
+  // Helper to add a node
+  const addNode = (name, type) => {
+    if (!nodeSet.has(name)) {
+      nodes.push({ name, type });
+      nodeSet.add(name);
+      dependencyMap[name] = [];
+    }
+  };
+  
+  // Add all source files as nodes
+  parsedFiles.forEach(file => addNode(file.filePath, 'code'));
+  
+  // Process dependencies
   parsedFiles.forEach(file => {
     file.dependencies.forEach(dep => {
       if (dep.type === 'internal') {
         const resolvedTarget = resolveImportPath(file.filePath, dep.module, fileSet);
         if (resolvedTarget && fileSet.has(resolvedTarget)) {
-          if (!nodeSet.has(resolvedTarget)) {
-            nodes.push({ name: resolvedTarget, type: 'code' });
-            nodeSet.add(resolvedTarget);
-            dependencyMap[resolvedTarget] = [];
-          }
+          addNode(resolvedTarget, 'code');
           dependencyMap[file.filePath].push(resolvedTarget);
         }
-      } else if (dep.type === 'external' || dep.type === 'builtin') {
-        if (!nodeSet.has(dep.module)) {
-          nodes.push({ 
-            name: dep.module, 
-            type: dep.type === 'builtin' ? 'builtin' : 'external' 
-          });
-          nodeSet.add(dep.module);
-          dependencyMap[dep.module] = [];
-        }
+      } else {
+        const type = dep.type === 'builtin' ? 'builtin' : 'external';
+        addNode(dep.module, type);
         dependencyMap[file.filePath].push(dep.module);
       }
     });

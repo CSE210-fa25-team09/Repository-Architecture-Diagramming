@@ -49,27 +49,66 @@ async function getContent(owner, repo, path, ref = "") {
 }
 
 async function getRepoTree(owner, repo, path = "", ref = "") {
-  const data = await getContent(owner, repo, path, ref);
-
-  // console.log(data)
-
-  const tree = await Promise.all(
-    data.map(async (item) => {
-      if (item.type === "dir") {
-        return {
-          name: item.name,
-          type: "dir",
-          children: await getRepoTree(owner, repo, item.path, ref)
-        };
-      } else {
-        return {
-          name: item.name,
-          type: "file"
-        };
-      }
-    })
-  );
-  return tree;
+  // Get the SHA of the branch/ref
+  if (!ref) {
+    const response = await octokit.repos.get({ owner, repo });
+    updateRateLimitFromHeaders(response.headers);
+    ref = response.data.default_branch;
+  }
+  
+  // Get the commit SHA
+  const commitResponse = await octokit.repos.getCommit({ owner, repo, ref });
+  updateRateLimitFromHeaders(commitResponse.headers);
+  const treeSha = commitResponse.data.commit.tree.sha;
+  
+  // Get entire tree recursively in ONE API call
+  const treeResponse = await octokit.git.getTree({
+    owner,
+    repo,
+    tree_sha: treeSha,
+    recursive: 'true'  // This gets the entire tree at once!
+  });
+  updateRateLimitFromHeaders(treeResponse.headers);
+  
+  // Build nested tree structure from flat list
+  const root = [];
+  const pathMap = { '': root };
+  
+  // Sort by path to ensure parents come before children
+  const sortedTree = treeResponse.data.tree.sort((a, b) => a.path.localeCompare(b.path));
+  
+  for (const item of sortedTree) {
+    // Skip if filtered by path prefix
+    if (path && !item.path.startsWith(path)) continue;
+    
+    const parts = item.path.split('/');
+    const name = parts[parts.length - 1];
+    const parentPath = parts.slice(0, -1).join('/');
+    
+    const node = {
+      name,
+      type: item.type === 'tree' ? 'dir' : 'file',
+      path: item.path
+    };
+    
+    if (item.type === 'tree') {
+      node.children = [];
+      pathMap[item.path] = node.children;
+    }
+    
+    const parent = pathMap[parentPath] || root;
+    parent.push(node);
+  }
+  
+  // If path filter was specified, return just that subtree
+  if (path) {
+    const filtered = sortedTree.find(item => item.path === path);
+    if (filtered && filtered.type === 'tree') {
+      return pathMap[path] || [];
+    }
+  }
+  
+  return root;
 }
 
 async function getFile(owner, repo, path, branch = "") {
@@ -88,8 +127,7 @@ async function getAllBranches(owner, repo) {
     "owner": owner, 
     "repo": repo, 
     "per_page": 100
-  }, { headers: {} });
-  // Note: paginate doesn't return headers easily, so we skip rate limit check here
+  });
   return response.map(branch => branch.name);
 }
 
