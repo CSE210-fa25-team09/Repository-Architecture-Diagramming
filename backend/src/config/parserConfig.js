@@ -20,13 +20,19 @@ export const REGEX_PATTERNS = {
   python: {
     import: /^import\s+([\w.]+)(?:\s+as\s+\w+)?/gm,
     fromImport: /^from\s+([\w.]+)\s+import\s+/gm
+  },
+  
+  // Java patterns
+  java: {
+    import: /^import\s+(?:static\s+)?([\w.]+(?:\.\*)?)\s*;/gm
   }
 };
 
 export const FILE_EXTENSIONS = {
   javascript: ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs'],
   cpp: ['.cpp', '.cc', '.cxx', '.c', '.h', '.hpp', '.hxx'],
-  python: ['.py']
+  python: ['.py'],
+  java: ['.java']
 };
 
 export const BUILTIN_MODULES = {
@@ -67,13 +73,25 @@ export const BUILTIN_MODULES = {
     'types', 'typing', 'unicodedata', 'unittest', 'urllib', 'uu', 'uuid', 'venv',
     'warnings', 'wave', 'weakref', 'webbrowser', 'winreg', 'winsound', 'wsgiref',
     'xdrlib', 'xml', 'xmlrpc', 'zipapp', 'zipfile', 'zipimport', 'zlib'
+  ],
+  
+  // Java standard library packages (java.* and javax.*)
+  java: [
+    'java.applet', 'java.awt', 'java.beans', 'java.io', 'java.lang', 'java.math',
+    'java.net', 'java.nio', 'java.rmi', 'java.security', 'java.sql', 'java.text',
+    'java.time', 'java.util', 'javax.accessibility', 'javax.activation', 'javax.activity',
+    'javax.annotation', 'javax.crypto', 'javax.imageio', 'javax.jws', 'javax.lang',
+    'javax.management', 'javax.naming', 'javax.net', 'javax.print', 'javax.rmi',
+    'javax.script', 'javax.security', 'javax.sound', 'javax.sql', 'javax.swing',
+    'javax.tools', 'javax.transaction', 'javax.xml'
   ]
 };
 
 export const PATH_RESOLUTION_EXTENSIONS = {
   javascript: ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '/index.js', '/index.ts', '/index.jsx', '/index.tsx'],
   cpp: ['.h', '.hpp', '.hxx', '.cpp', '.cc', '.cxx'],
-  python: ['.py', '/__init__.py']
+  python: ['.py', '/__init__.py'],
+  java: ['.java']
 };
 
 // Helper to detect language from file extension
@@ -82,5 +100,6 @@ export function getLanguageFromExtension(filePath) {
   
   if (FILE_EXTENSIONS.python.includes(ext)) return 'python';
   if (FILE_EXTENSIONS.cpp.includes(ext)) return 'cpp';
+  if (FILE_EXTENSIONS.java.includes(ext)) return 'java';
   return 'javascript'; // default
 }

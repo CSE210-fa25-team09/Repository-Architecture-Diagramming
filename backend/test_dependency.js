@@ -189,6 +189,67 @@ async function analyzeDependenciesPython() {
   }
 }
 
+function extractJavaFiles(tree) {
+  const codeFiles = [];
+  
+  function traverse(nodes, currentPath = '') {
+    if (!Array.isArray(nodes)) return;
+    nodes.forEach(node => {
+      const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
+      if (node.type === 'file' && FILE_EXTENSIONS.java.includes(node.name.substring(node.name.lastIndexOf('.')))) {
+        codeFiles.push(fullPath);
+      } else if (node.type === 'dir' && node.children) {
+        traverse(node.children, fullPath);
+      }
+    });
+  }
+  
+  traverse(tree);
+  return codeFiles;
+}
+
+async function analyzeDependenciesJava() {
+  // Simple Java project for testing - a basic Spring Boot REST API example
+  const owner = 'spring-guides', repo = 'gs-rest-service', branch = 'main', maxFiles = 30; // Small Spring Boot tutorial
+  
+  console.log(`\nAnalyzing Java project: ${owner}/${repo} (${branch})${maxFiles ? `, max ${maxFiles} files` : ' (all files)'}\n`);
+  
+  try {
+    const tree = await githubService.getRepoTree(owner, repo, '', branch);
+    const allCodeFiles = extractJavaFiles(tree);
+    const filesToAnalyze = maxFiles ? allCodeFiles.slice(0, maxFiles) : allCodeFiles;
+    
+    console.log(`Found ${allCodeFiles.length} Java files, analyzing ${filesToAnalyze.length}\n`);
+    
+    const parsedFiles = [];
+    for (const filePath of filesToAnalyze) {
+      const content = await githubService.getFile(owner, repo, filePath, branch);
+      const parsed = dependencyAnalyzer.parseFile(content, filePath);
+      parsedFiles.push(parsed);
+      
+      const stats = parsed.dependencies.reduce((acc, d) => (acc[d.type] = (acc[d.type] || 0) + 1, acc), {});
+      console.log(`✓ ${filePath} (${parsed.dependencies.length} deps: ${stats.internal || 0} int, ${stats.external || 0} ext, ${stats.builtin || 0} std)`);
+    }
+    
+    const graphJSON = dependencyAnalyzer.exportDependencyGraphJSON(parsedFiles);
+    
+    const outputDir = path.join(process.cwd(), 'dependency_graphs');
+    await fs.mkdir(outputDir, { recursive: true });
+    
+    const commitSha = await githubService.getLatestCommit(owner, repo, branch);
+    const filename = `${repo}_${branch}_${commitSha}.json`;
+    const outputPath = path.join(outputDir, filename);
+    
+    await fs.writeFile(outputPath, JSON.stringify(graphJSON, null, 2), 'utf-8');
+    
+    console.log(`\n✅ Saved: ${outputPath}`);
+    console.log(`Nodes: ${graphJSON.nodes.length}, Edges: ${Object.values(graphJSON.dependencies).reduce((s, d) => s + d.length, 0)}\n`);
+    
+  } catch (err) {
+    console.error('❌ Error:', err.message);
+  }
+}
+
 // Command-line argument handling
 const testType = process.argv[2]?.toUpperCase() || 'JS';
 
@@ -198,8 +259,10 @@ if (testType === 'JS') {
   analyzeDependenciesCpp();
 } else if (testType === 'PYTHON' || testType === 'PY') {
   analyzeDependenciesPython();
+} else if (testType === 'JAVA') {
+  analyzeDependenciesJava();
 } else {
-  console.log('Valid options: JS (default), CPP, PYTHON/PY');
-  console.log('Usage: node test_dependency.js [JS|CPP|PYTHON]');
+  console.log('Valid options: JS (default), CPP, PYTHON/PY, JAVA');
+  console.log('Usage: node test_dependency.js [JS|CPP|PYTHON|JAVA]');
   process.exit(1);
 }

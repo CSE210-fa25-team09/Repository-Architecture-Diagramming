@@ -18,7 +18,7 @@ function parseJavaScriptFile(content, filePath) {
   while ((match = REGEX_PATTERNS.javascript.require.exec(content)) !== null) {
     dependencies.push({
       module: match[1],
-      type: classifyDependency(match[1])
+      type: classifyJavascriptDependency(match[1])
     });
   }
   
@@ -26,7 +26,7 @@ function parseJavaScriptFile(content, filePath) {
   while ((match = REGEX_PATTERNS.javascript.import.exec(content)) !== null) {
     dependencies.push({
       module: match[1],
-      type: classifyDependency(match[1])
+      type: classifyJavascriptDependency(match[1])
     });
   }
   
@@ -52,6 +52,35 @@ function parseCppFile(content, filePath) {
       module: header,
       type: header.startsWith('.') || header.includes('/') ? 'internal' : 'external'
     });
+  }
+  
+  return { filePath, dependencies };
+}
+
+function parseJavaFile(content, filePath) {
+  const dependencies = [];
+  let match;
+  
+  // Parse import statements (including static imports and wildcard imports)
+  while ((match = REGEX_PATTERNS.java.import.exec(content)) !== null) {
+    const importPath = match[1];
+    
+    // Skip wildcard imports like java.util.*
+    if (importPath.endsWith('.*')) {
+      const packageName = importPath.slice(0, -2); // Remove .*
+      dependencies.push({
+        module: packageName,
+        type: classifyJavaDependency(packageName)
+      });
+    } else {
+      // For specific class imports, use the package name
+      const lastDot = importPath.lastIndexOf('.');
+      const packageName = lastDot > 0 ? importPath.substring(0, lastDot) : importPath;
+      dependencies.push({
+        module: packageName,
+        type: classifyJavaDependency(packageName)
+      });
+    }
   }
   
   return { filePath, dependencies };
@@ -86,6 +115,11 @@ function parsePythonFile(content, filePath) {
 function parseFile(content, filePath) {
   const ext = filePath.substring(filePath.lastIndexOf('.'));
   
+  // Java files
+  if (FILE_EXTENSIONS.java.includes(ext)) {
+    return parseJavaFile(content, filePath);
+  }
+  
   // Python files
   if (FILE_EXTENSIONS.python.includes(ext)) {
     return parsePythonFile(content, filePath);
@@ -100,7 +134,7 @@ function parseFile(content, filePath) {
   return parseJavaScriptFile(content, filePath);
 }
 
-function classifyDependency(moduleName) {
+function classifyJavascriptDependency(moduleName) {
   if (moduleName.startsWith('.')) return 'internal';
   
   if (BUILTIN_MODULES.javascript.includes(moduleName) || moduleName.startsWith('node:')) {
@@ -118,6 +152,21 @@ function classifyPythonDependency(moduleName) {
     return 'builtin';
   }
   
+  return 'external';
+}
+
+function classifyJavaDependency(packageName) {
+  // Check if it's a standard Java package
+  if (packageName.startsWith('java.') || packageName.startsWith('javax.')) {
+    return 'builtin';
+  }
+  
+  // Check against known standard packages
+  if (BUILTIN_MODULES.java.includes(packageName)) {
+    return 'builtin';
+  }
+  
+  // Everything else is external (third-party libraries)
   return 'external';
 }
 
@@ -197,6 +246,7 @@ export default {
   parseJavaScriptFile,
   parseCppFile,
   parsePythonFile,
+  parseJavaFile,
   parseFile,
   exportDependencyGraphJSON
 };
