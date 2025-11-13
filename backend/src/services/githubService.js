@@ -1,8 +1,8 @@
 import { Octokit } from "@octokit/rest";
 
-// Rate limited to 60 req per hour, without GITHUB_TOKEN _VERY LIMITING_
+// Rate limited to 60 req per hour without GITHUB_TOKEN, 5000 with token
 const octokit = process.env.GITHUB_TOKEN
-  ? new Octokit({ auth: process.env.GITHUB_TOKEN})
+  ? new Octokit({ auth: process.env.GITHUB_TOKEN })
   : new Octokit();
 
 async function getContent(owner, repo, path, ref = "") {
@@ -86,12 +86,32 @@ async function getAllCommits(owner, repo, branch="") {
   return formattedCommits;
 }
 
+async function getLatestCommit(owner, repo, branch = "") {
+  if (!branch) {
+    const { data: repoData } = await octokit.repos.get({
+      "owner": owner,
+      "repo": repo
+    });
+    branch = repoData.default_branch;
+  }
+  
+  const { data } = await octokit.repos.listCommits({
+    "owner": owner,
+    "repo": repo,
+    "sha": branch,
+    "per_page": 1
+  });
+  
+  return data[0]?.sha?.substring(0, 7) || 'unknown'; // Return short SHA (7 chars)
+}
+
 const githubService = {
   getContent,
   getRepoTree,
   getFile,
   getAllBranches,
-  getAllCommits
+  getAllCommits,
+  getLatestCommit
 };
 
 export default githubService;
