@@ -33,6 +33,10 @@ function updateRateLimitFromHeaders(headers) {
   }
 }
 
+function getRateLimit() {
+  return lastRateLimit;
+}
+
 async function getContent(owner, repo, path, ref = "") {
   const response = await octokit.repos.getContent({ 
     "owner": owner, 
@@ -144,7 +148,8 @@ const githubService = {
   getFile,
   getAllBranches,
   getAllCommits,
-  getLatestCommit
+  getLatestCommit,
+  getRateLimit
 };
 
 export default githubService;
