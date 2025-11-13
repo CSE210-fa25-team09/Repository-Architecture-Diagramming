@@ -12,7 +12,7 @@ function extractCodeFiles(tree) {
     if (!Array.isArray(nodes)) return;
     nodes.forEach(node => {
       const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
-      if (node.type === 'file' && FILE_EXTENSIONS.javascript.includes(node.name.substring(node.name.lastIndexOf('.')))) {
+      if (node.type === 'file' && FILE_EXTENSIONS.jsts.includes(node.name.substring(node.name.lastIndexOf('.')))) {
         codeFiles.push(fullPath);
       } else if (node.type === 'dir' && node.children) {
         traverse(node.children, fullPath);
@@ -25,10 +25,10 @@ function extractCodeFiles(tree) {
 }
 
 async function analyzeDependenciesJS() {
-  // Analyze our own project
+  // Analyze our own project (mixed JS/TS)
   const owner = 'CSE210-fa25-team09', repo = 'Repository-Architecture-Diagramming', branch = 'main', maxFiles = null;
   
-  console.log(`\nAnalyzing: ${owner}/${repo} (${branch})${maxFiles ? `, max ${maxFiles} files` : ' (all files)'}\n`);
+  console.log(`\nAnalyzing JS/TS project: ${owner}/${repo} (${branch})${maxFiles ? `, max ${maxFiles} files` : ' (all files)'}\n`);
   
   try {
     const tree = await githubService.getRepoTree(owner, repo, '', branch);
@@ -208,6 +208,25 @@ function extractJavaFiles(tree) {
   return codeFiles;
 }
 
+function extractGoFiles(tree) {
+  const codeFiles = [];
+  
+  function traverse(nodes, currentPath = '') {
+    if (!Array.isArray(nodes)) return;
+    nodes.forEach(node => {
+      const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
+      if (node.type === 'file' && FILE_EXTENSIONS.go.includes(node.name.substring(node.name.lastIndexOf('.')))) {
+        codeFiles.push(fullPath);
+      } else if (node.type === 'dir' && node.children) {
+        traverse(node.children, fullPath);
+      }
+    });
+  }
+  
+  traverse(tree);
+  return codeFiles;
+}
+
 async function analyzeDependenciesJava() {
   // Simple Java project for testing - a basic Spring Boot REST API example
   const owner = 'spring-guides', repo = 'gs-rest-service', branch = 'main', maxFiles = 30; // Small Spring Boot tutorial
@@ -250,19 +269,109 @@ async function analyzeDependenciesJava() {
   }
 }
 
+async function analyzeDependenciesGo() {
+  // Simple Go project for testing - a popular CLI tool
+  const owner = 'spf13', repo = 'cobra', branch = 'main', maxFiles = 30; // Cobra CLI library
+  
+  console.log(`\nAnalyzing Go project: ${owner}/${repo} (${branch})${maxFiles ? `, max ${maxFiles} files` : ' (all files)'}\n`);
+  
+  try {
+    const tree = await githubService.getRepoTree(owner, repo, '', branch);
+    const allCodeFiles = extractGoFiles(tree);
+    const filesToAnalyze = maxFiles ? allCodeFiles.slice(0, maxFiles) : allCodeFiles;
+    
+    console.log(`Found ${allCodeFiles.length} Go files, analyzing ${filesToAnalyze.length}\n`);
+    
+    const parsedFiles = [];
+    for (const filePath of filesToAnalyze) {
+      const content = await githubService.getFile(owner, repo, filePath, branch);
+      const parsed = dependencyAnalyzer.parseFile(content, filePath);
+      parsedFiles.push(parsed);
+      
+      const stats = parsed.dependencies.reduce((acc, d) => (acc[d.type] = (acc[d.type] || 0) + 1, acc), {});
+      console.log(`✓ ${filePath} (${parsed.dependencies.length} deps: ${stats.internal || 0} int, ${stats.external || 0} ext, ${stats.builtin || 0} std)`);
+    }
+    
+    const graphJSON = dependencyAnalyzer.exportDependencyGraphJSON(parsedFiles);
+    
+    // Save to file
+    const outputDir = './dependency_graphs';
+    await fs.mkdir(outputDir, { recursive: true });
+    
+    const commitSha = await githubService.getLatestCommit(owner, repo, branch);
+    const filename = `${repo}_${branch}_${commitSha}.json`;
+    const outputPath = path.join(outputDir, filename);
+    
+    await fs.writeFile(outputPath, JSON.stringify(graphJSON, null, 2), 'utf-8');
+    
+    console.log(`\n✅ Saved: ${outputPath}`);
+    console.log(`Nodes: ${graphJSON.nodes.length}, Edges: ${Object.values(graphJSON.dependencies).reduce((s, d) => s + d.length, 0)}\n`);
+    
+  } catch (err) {
+    console.error('❌ Error:', err.message);
+  }
+}
+
+async function analyzeDependenciesTS() {
+  // Pure TypeScript project for testing enhanced TS features
+  const owner = 'microsoft', repo = 'TypeScript', branch = 'main', maxFiles = 30; // TypeScript compiler itself
+  
+  console.log(`\nAnalyzing TypeScript project: ${owner}/${repo} (${branch})${maxFiles ? `, max ${maxFiles} files` : ' (all files)'}\n`);
+  
+  try {
+    const tree = await githubService.getRepoTree(owner, repo, '', branch);
+    const allCodeFiles = extractCodeFiles(tree);
+    const filesToAnalyze = maxFiles ? allCodeFiles.slice(0, maxFiles) : allCodeFiles;
+    
+    console.log(`Found ${allCodeFiles.length} TS files, analyzing ${filesToAnalyze.length}\n`);
+    
+    const parsedFiles = [];
+    for (const filePath of filesToAnalyze) {
+      const content = await githubService.getFile(owner, repo, filePath, branch);
+      const parsed = dependencyAnalyzer.parseFile(content, filePath);
+      parsedFiles.push(parsed);
+      
+      const stats = parsed.dependencies.reduce((acc, d) => (acc[d.type] = (acc[d.type] || 0) + 1, acc), {});
+      console.log(`✓ ${filePath} (${parsed.dependencies.length} deps: ${stats.internal || 0} int, ${stats.external || 0} ext, ${stats.builtin || 0} std)`);
+    }
+    
+    const graphJSON = dependencyAnalyzer.exportDependencyGraphJSON(parsedFiles);
+    
+    // Save to file
+    const outputDir = './dependency_graphs';
+    await fs.mkdir(outputDir, { recursive: true });
+    
+    const commitSha = await githubService.getLatestCommit(owner, repo, branch);
+    const filename = `${repo}_${branch}_${commitSha}.json`;
+    const outputPath = path.join(outputDir, filename);
+    
+    await fs.writeFile(outputPath, JSON.stringify(graphJSON, null, 2), 'utf-8');
+    
+    console.log(`\n✅ Saved: ${outputPath}`);
+    console.log(`Nodes: ${graphJSON.nodes.length}, Edges: ${Object.values(graphJSON.dependencies).reduce((s, d) => s + d.length, 0)}\n`);
+    
+  } catch (err) {
+    console.error('❌ Error:', err.message);
+  }
+}
+
 // Command-line argument handling
 const testType = process.argv[2]?.toUpperCase() || 'JS';
 
 if (testType === 'JS') {
   analyzeDependenciesJS();
+} else if (testType === 'TS' || testType === 'TYPESCRIPT') {
+  analyzeDependenciesTS();
 } else if (testType === 'CPP') {
   analyzeDependenciesCpp();
 } else if (testType === 'PYTHON' || testType === 'PY') {
   analyzeDependenciesPython();
 } else if (testType === 'JAVA') {
   analyzeDependenciesJava();
+} else if (testType === 'GO' || testType === 'GOLANG') {
+  analyzeDependenciesGo();
 } else {
-  console.log('Valid options: JS (default), CPP, PYTHON/PY, JAVA');
-  console.log('Usage: node test_dependency.js [JS|CPP|PYTHON|JAVA]');
+  console.log('Valid options: JS (default), TS/TYPESCRIPT, CPP, PYTHON/PY, JAVA, GO/GOLANG');
+  console.log('Usage: node test_dependency.js [JS|TS|CPP|PYTHON|JAVA|GO]');
   process.exit(1);
 }

@@ -1,7 +1,3 @@
-/**
- * Dependency Analyzer - Core Functions Only
- */
-
 import { 
   REGEX_PATTERNS, 
   BUILTIN_MODULES, 
@@ -10,24 +6,69 @@ import {
   getLanguageFromExtension
 } from '../config/parserConfig.js';
 
-function parseJavaScriptFile(content, filePath) {
+function parseJSTSFile(content, filePath) {
   const dependencies = [];
+  const seen = new Set(); // Avoid duplicates
   let match;
   
   // Parse require() statements
-  while ((match = REGEX_PATTERNS.javascript.require.exec(content)) !== null) {
-    dependencies.push({
-      module: match[1],
-      type: classifyJavascriptDependency(match[1])
-    });
+  while ((match = REGEX_PATTERNS.jsts.require.exec(content)) !== null) {
+    const moduleName = match[1];
+    if (!seen.has(moduleName)) {
+      dependencies.push({
+        module: moduleName,
+        type: classifyJstsDependency(moduleName)
+      });
+      seen.add(moduleName);
+    }
   }
   
-  // Parse import statements
-  while ((match = REGEX_PATTERNS.javascript.import.exec(content)) !== null) {
-    dependencies.push({
-      module: match[1],
-      type: classifyJavascriptDependency(match[1])
-    });
+  // Parse import statements (including type-only imports)
+  while ((match = REGEX_PATTERNS.jsts.import.exec(content)) !== null) {
+    const moduleName = match[1];
+    if (!seen.has(moduleName)) {
+      dependencies.push({
+        module: moduleName,
+        type: classifyJstsDependency(moduleName)
+      });
+      seen.add(moduleName);
+    }
+  }
+  
+  // Parse dynamic imports: import('module')
+  while ((match = REGEX_PATTERNS.jsts.dynamicImport.exec(content)) !== null) {
+    const moduleName = match[1];
+    if (!seen.has(moduleName)) {
+      dependencies.push({
+        module: moduleName,
+        type: classifyJstsDependency(moduleName)
+      });
+      seen.add(moduleName);
+    }
+  }
+  
+  // Parse export from: export { X } from 'module'
+  while ((match = REGEX_PATTERNS.jsts.exportFrom.exec(content)) !== null) {
+    const moduleName = match[1];
+    if (!seen.has(moduleName)) {
+      dependencies.push({
+        module: moduleName,
+        type: classifyJstsDependency(moduleName)
+      });
+      seen.add(moduleName);
+    }
+  }
+  
+  // Parse TypeScript triple-slash directives: /// <reference path="..." />
+  while ((match = REGEX_PATTERNS.jsts.tripleSlash.exec(content)) !== null) {
+    const moduleName = match[1];
+    if (!seen.has(moduleName)) {
+      dependencies.push({
+        module: moduleName,
+        type: classifyJstsDependency(moduleName)
+      });
+      seen.add(moduleName);
+    }
   }
   
   return { filePath, dependencies };
@@ -86,6 +127,36 @@ function parseJavaFile(content, filePath) {
   return { filePath, dependencies };
 }
 
+function parseGoFile(content, filePath) {
+  const dependencies = [];
+  const importedPackages = new Set();
+  let match;
+  
+  // Parse single-line imports: import "package"
+  while ((match = REGEX_PATTERNS.go.import.exec(content)) !== null) {
+    importedPackages.add(match[1]);
+  }
+  
+  // Parse multi-line import blocks: import ( ... )
+  while ((match = REGEX_PATTERNS.go.importBlock.exec(content)) !== null) {
+    const importBlock = match[1];
+    let lineMatch;
+    while ((lineMatch = REGEX_PATTERNS.go.importLine.exec(importBlock)) !== null) {
+      importedPackages.add(lineMatch[1]);
+    }
+  }
+  
+  // Classify each imported package
+  for (const packagePath of importedPackages) {
+    dependencies.push({
+      module: packagePath,
+      type: classifyGoDependency(packagePath)
+    });
+  }
+  
+  return { filePath, dependencies };
+}
+
 function parsePythonFile(content, filePath) {
   const dependencies = [];
   let match;
@@ -115,6 +186,11 @@ function parsePythonFile(content, filePath) {
 function parseFile(content, filePath) {
   const ext = filePath.substring(filePath.lastIndexOf('.'));
   
+  // Go files
+  if (FILE_EXTENSIONS.go.includes(ext)) {
+    return parseGoFile(content, filePath);
+  }
+  
   // Java files
   if (FILE_EXTENSIONS.java.includes(ext)) {
     return parseJavaFile(content, filePath);
@@ -131,13 +207,13 @@ function parseFile(content, filePath) {
   }
   
   // JavaScript/TypeScript files (default)
-  return parseJavaScriptFile(content, filePath);
+  return parseJSTSFile(content, filePath);
 }
 
-function classifyJavascriptDependency(moduleName) {
+function classifyJstsDependency(moduleName) {
   if (moduleName.startsWith('.')) return 'internal';
   
-  if (BUILTIN_MODULES.javascript.includes(moduleName) || moduleName.startsWith('node:')) {
+  if (BUILTIN_MODULES.jsts.includes(moduleName) || moduleName.startsWith('node:')) {
     return 'builtin';
   }
   
@@ -168,6 +244,29 @@ function classifyJavaDependency(packageName) {
   
   // Everything else is external (third-party libraries)
   return 'external';
+}
+
+function classifyGoDependency(packagePath) {
+  // Relative imports (start with .)
+  if (packagePath.startsWith('.')) return 'internal';
+  
+  // Check if it's a standard library package
+  // Standard library packages don't contain dots or are single-level
+  const parts = packagePath.split('/');
+  const basePackage = parts[0];
+  
+  // Check against Go standard library
+  if (BUILTIN_MODULES.go.includes(packagePath) || BUILTIN_MODULES.go.includes(basePackage)) {
+    return 'builtin';
+  }
+  
+  // External packages typically have domain names (contain dots) or start with github.com, etc.
+  if (basePackage.includes('.') || packagePath.includes('github.com') || packagePath.includes('golang.org')) {
+    return 'external';
+  }
+  
+  // If no dot and not in stdlib, could be internal project package
+  return 'internal';
 }
 
 function resolveImportPath(sourcePath, importPath, fileSet) {
@@ -243,10 +342,11 @@ function exportDependencyGraphJSON(parsedFiles) {
 }
 
 export default {
-  parseJavaScriptFile,
+  parseJSTSFile,
   parseCppFile,
   parsePythonFile,
   parseJavaFile,
+  parseGoFile,
   parseFile,
   exportDependencyGraphJSON
 };
