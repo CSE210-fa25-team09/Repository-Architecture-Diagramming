@@ -136,7 +136,7 @@ async function analyzeDependenciesCpp() {
       console.log(`✓ ${filePath} (${parsed.dependencies.length} deps: ${stats.internal || 0} int, ${stats.external || 0} ext, ${stats.builtin || 0} std)`);
     }
     
-    const graphJSON = dependencyAnalyzer.exportDependencyGraphJSON(parsedFiles);
+    const graphJSON = dependencyAnalyzer.exportDependencyGraphWithTree(parsedFiles, tree);
     
     const outputDir = path.join(process.cwd(), 'dependency_graphs');
     await fs.mkdir(outputDir, { recursive: true });
@@ -145,10 +145,10 @@ async function analyzeDependenciesCpp() {
     const filename = `${repo}_${branch}_${commitSha}.json`;
     const outputPath = path.join(outputDir, filename);
     
-    await fs.writeFile(outputPath, JSON.stringify(graphJSON, null, 2), 'utf-8');
+    await fs.writeFile(outputPath, JSON.stringify({ name: repo, type: "dir", children: graphJSON }, null, 2), 'utf-8');
     
     console.log(`\n✅ Saved: ${outputPath}`);
-    console.log(`Nodes: ${graphJSON.nodes.length}, Edges: ${Object.values(graphJSON.dependencies).reduce((s, d) => s + d.length, 0)}\n`);
+    console.log(`Files analyzed: ${parsedFiles.length}\n`);
     
   } catch (err) {
     console.error('❌ Error:', err.message);
@@ -197,7 +197,7 @@ async function analyzeDependenciesPython() {
       console.log(`✓ ${filePath} (${parsed.dependencies.length} deps: ${stats.internal || 0} int, ${stats.external || 0} ext, ${stats.builtin || 0} std)`);
     }
     
-    const graphJSON = dependencyAnalyzer.exportDependencyGraphJSON(parsedFiles);
+    const graphJSON = dependencyAnalyzer.exportDependencyGraphWithTree(parsedFiles, tree);
     
     const outputDir = path.join(process.cwd(), 'dependency_graphs');
     await fs.mkdir(outputDir, { recursive: true });
@@ -206,10 +206,10 @@ async function analyzeDependenciesPython() {
     const filename = `${repo}_${branch}_${commitSha}.json`;
     const outputPath = path.join(outputDir, filename);
     
-    await fs.writeFile(outputPath, JSON.stringify(graphJSON, null, 2), 'utf-8');
+    await fs.writeFile(outputPath, JSON.stringify({ name: repo, type: "dir", children: graphJSON }, null, 2), 'utf-8');
     
     console.log(`\n✅ Saved: ${outputPath}`);
-    console.log(`Nodes: ${graphJSON.nodes.length}, Edges: ${Object.values(graphJSON.dependencies).reduce((s, d) => s + d.length, 0)}\n`);
+    console.log(`Files analyzed: ${parsedFiles.length}\n`);
     
   } catch (err) {
     console.error('❌ Error:', err.message);
@@ -277,7 +277,7 @@ async function analyzeDependenciesJava() {
       console.log(`✓ ${filePath} (${parsed.dependencies.length} deps: ${stats.internal || 0} int, ${stats.external || 0} ext, ${stats.builtin || 0} std)`);
     }
     
-    const graphJSON = dependencyAnalyzer.exportDependencyGraphJSON(parsedFiles);
+    const graphJSON = dependencyAnalyzer.exportDependencyGraphWithTree(parsedFiles, tree);
     
     const outputDir = path.join(process.cwd(), 'dependency_graphs');
     await fs.mkdir(outputDir, { recursive: true });
@@ -286,10 +286,10 @@ async function analyzeDependenciesJava() {
     const filename = `${repo}_${branch}_${commitSha}.json`;
     const outputPath = path.join(outputDir, filename);
     
-    await fs.writeFile(outputPath, JSON.stringify(graphJSON, null, 2), 'utf-8');
+    await fs.writeFile(outputPath, JSON.stringify({ name: repo, type: "dir", children: graphJSON }, null, 2), 'utf-8');
     
     console.log(`\n✅ Saved: ${outputPath}`);
-    console.log(`Nodes: ${graphJSON.nodes.length}, Edges: ${Object.values(graphJSON.dependencies).reduce((s, d) => s + d.length, 0)}\n`);
+    console.log(`Files analyzed: ${parsedFiles.length}\n`);
     
   } catch (err) {
     console.error('❌ Error:', err.message);
@@ -298,7 +298,7 @@ async function analyzeDependenciesJava() {
 
 async function analyzeDependenciesGo() {
   // Simple Go project for testing - a popular CLI tool
-  const owner = 'spf13', repo = 'cobra', branch = 'main', maxFiles = 30; // Cobra CLI library
+  const owner = 'spf13', repo = 'cobra', branch = 'main', maxFiles = 50; // Cobra CLI library
   
   console.log(`\nAnalyzing Go project: ${owner}/${repo} (${branch})${maxFiles ? `, max ${maxFiles} files` : ' (all files)'}\n`);
   
@@ -319,7 +319,7 @@ async function analyzeDependenciesGo() {
       console.log(`✓ ${filePath} (${parsed.dependencies.length} deps: ${stats.internal || 0} int, ${stats.external || 0} ext, ${stats.builtin || 0} std)`);
     }
     
-    const graphJSON = dependencyAnalyzer.exportDependencyGraphJSON(parsedFiles);
+    const graphJSON = dependencyAnalyzer.exportDependencyGraphWithTree(parsedFiles, tree);
     
     // Save to file
     const outputDir = './dependency_graphs';
@@ -329,10 +329,10 @@ async function analyzeDependenciesGo() {
     const filename = `${repo}_${branch}_${commitSha}.json`;
     const outputPath = path.join(outputDir, filename);
     
-    await fs.writeFile(outputPath, JSON.stringify(graphJSON, null, 2), 'utf-8');
+    await fs.writeFile(outputPath, JSON.stringify({ name: repo, type: "dir", children: graphJSON }, null, 2), 'utf-8');
     
     console.log(`\n✅ Saved: ${outputPath}`);
-    console.log(`Nodes: ${graphJSON.nodes.length}, Edges: ${Object.values(graphJSON.dependencies).reduce((s, d) => s + d.length, 0)}\n`);
+    console.log(`Files analyzed: ${parsedFiles.length}\n`);
     
   } catch (err) {
     console.error('❌ Error:', err.message);
@@ -362,7 +362,7 @@ async function analyzeDependenciesTS() {
       console.log(`✓ ${filePath} (${parsed.dependencies.length} deps: ${stats.internal || 0} int, ${stats.external || 0} ext, ${stats.builtin || 0} std)`);
     }
     
-    const graphJSON = dependencyAnalyzer.exportDependencyGraphJSON(parsedFiles);
+    const graphJSON = dependencyAnalyzer.exportDependencyGraphWithTree(parsedFiles, tree);
     
     // Save to file
     const outputDir = './dependency_graphs';
@@ -372,10 +372,10 @@ async function analyzeDependenciesTS() {
     const filename = `${repo}_${branch}_${commitSha}.json`;
     const outputPath = path.join(outputDir, filename);
     
-    await fs.writeFile(outputPath, JSON.stringify(graphJSON, null, 2), 'utf-8');
+    await fs.writeFile(outputPath, JSON.stringify({ name: repo, type: "dir", children: graphJSON }, null, 2), 'utf-8');
     
     console.log(`\n✅ Saved: ${outputPath}`);
-    console.log(`Nodes: ${graphJSON.nodes.length}, Edges: ${Object.values(graphJSON.dependencies).reduce((s, d) => s + d.length, 0)}\n`);
+    console.log(`Files analyzed: ${parsedFiles.length}\n`);
     
   } catch (err) {
     console.error('❌ Error:', err.message);
@@ -425,7 +425,7 @@ async function analyzeDependenciesMixed() {
       console.log(`  ${lang}: ${count} files`);
     });
     
-    const graphJSON = dependencyAnalyzer.exportDependencyGraphJSON(parsedFiles);
+    const graphJSON = dependencyAnalyzer.exportDependencyGraphWithTree(parsedFiles, tree);
     
     // Save to file
     const outputDir = './dependency_graphs';
@@ -435,10 +435,10 @@ async function analyzeDependenciesMixed() {
     const filename = `${repo}_${branch}_${commitSha}_mixed.json`;
     const outputPath = path.join(outputDir, filename);
     
-    await fs.writeFile(outputPath, JSON.stringify(graphJSON, null, 2), 'utf-8');
+    await fs.writeFile(outputPath, JSON.stringify({ name: repo, type: "dir", children: graphJSON }, null, 2), 'utf-8');
     
     console.log(`\n✅ Saved: ${outputPath}`);
-    console.log(`Nodes: ${graphJSON.nodes.length}, Edges: ${Object.values(graphJSON.dependencies).reduce((s, d) => s + d.length, 0)}\n`);
+    console.log(`Files analyzed: ${parsedFiles.length}\n`);
     
   } catch (err) {
     console.error('❌ Error:', err.message);
