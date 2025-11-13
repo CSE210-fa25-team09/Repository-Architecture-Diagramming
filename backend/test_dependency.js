@@ -1,19 +1,18 @@
 import 'dotenv/config';
 import dependencyAnalyzer from './src/services/dependencyService.js';
 import githubService from './src/services/githubService.js';
+import { FILE_EXTENSIONS } from './src/config/parserConfig.js';
 import fs from 'fs/promises';
 import path from 'path';
 
 function extractCodeFiles(tree) {
   const codeFiles = [];
-  // JavaScript/TypeScript file extensions
-  const exts = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs'];
   
   function traverse(nodes, currentPath = '') {
     if (!Array.isArray(nodes)) return;
     nodes.forEach(node => {
       const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
-      if (node.type === 'file' && exts.includes(node.name.substring(node.name.lastIndexOf('.')))) {
+      if (node.type === 'file' && FILE_EXTENSIONS.javascript.includes(node.name.substring(node.name.lastIndexOf('.')))) {
         codeFiles.push(fullPath);
       } else if (node.type === 'dir' && node.children) {
         traverse(node.children, fullPath);
@@ -69,14 +68,12 @@ async function analyzeDependenciesJS() {
 
 function extractCppFiles(tree) {
   const codeFiles = [];
-  // C/C++ file extensions
-  const exts = ['.cpp', '.cc', '.cxx', '.c', '.h', '.hpp', '.hxx'];
   
   function traverse(nodes, currentPath = '') {
     if (!Array.isArray(nodes)) return;
     nodes.forEach(node => {
       const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
-      if (node.type === 'file' && exts.includes(node.name.substring(node.name.lastIndexOf('.')))) {
+      if (node.type === 'file' && FILE_EXTENSIONS.cpp.includes(node.name.substring(node.name.lastIndexOf('.')))) {
         codeFiles.push(fullPath);
       } else if (node.type === 'dir' && node.children) {
         traverse(node.children, fullPath);
@@ -131,6 +128,67 @@ async function analyzeDependenciesCpp() {
   }
 }
 
+function extractPythonFiles(tree) {
+  const codeFiles = [];
+  
+  function traverse(nodes, currentPath = '') {
+    if (!Array.isArray(nodes)) return;
+    nodes.forEach(node => {
+      const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
+      if (node.type === 'file' && FILE_EXTENSIONS.python.includes(node.name.substring(node.name.lastIndexOf('.')))) {
+        codeFiles.push(fullPath);
+      } else if (node.type === 'dir' && node.children) {
+        traverse(node.children, fullPath);
+      }
+    });
+  }
+  
+  traverse(tree);
+  return codeFiles;
+}
+
+async function analyzeDependenciesPython() {
+  // Popular Python projects for testing:
+  const owner = 'pallets', repo = 'flask', branch = 'main', maxFiles = null; // ~50 Python files
+  
+  console.log(`\nAnalyzing Python project: ${owner}/${repo} (${branch})${maxFiles ? `, max ${maxFiles} files` : ' (all files)'}\n`);
+  
+  try {
+    const tree = await githubService.getRepoTree(owner, repo, '', branch);
+    const allCodeFiles = extractPythonFiles(tree);
+    const filesToAnalyze = maxFiles ? allCodeFiles.slice(0, maxFiles) : allCodeFiles;
+    
+    console.log(`Found ${allCodeFiles.length} Python files, analyzing ${filesToAnalyze.length}\n`);
+    
+    const parsedFiles = [];
+    for (const filePath of filesToAnalyze) {
+      const content = await githubService.getFile(owner, repo, filePath, branch);
+      const parsed = dependencyAnalyzer.parseFile(content, filePath);
+      parsedFiles.push(parsed);
+      
+      const stats = parsed.dependencies.reduce((acc, d) => (acc[d.type] = (acc[d.type] || 0) + 1, acc), {});
+      console.log(`✓ ${filePath} (${parsed.dependencies.length} deps: ${stats.internal || 0} int, ${stats.external || 0} ext, ${stats.builtin || 0} std)`);
+    }
+    
+    const graphJSON = dependencyAnalyzer.exportDependencyGraphJSON(parsedFiles);
+    
+    const outputDir = path.join(process.cwd(), 'dependency_graphs');
+    await fs.mkdir(outputDir, { recursive: true });
+    
+    const commitSha = await githubService.getLatestCommit(owner, repo, branch);
+    const filename = `${repo}_${branch}_${commitSha}.json`;
+    const outputPath = path.join(outputDir, filename);
+    
+    await fs.writeFile(outputPath, JSON.stringify(graphJSON, null, 2), 'utf-8');
+    
+    console.log(`\n✅ Saved: ${outputPath}`);
+    console.log(`Nodes: ${graphJSON.nodes.length}, Edges: ${Object.values(graphJSON.dependencies).reduce((s, d) => s + d.length, 0)}\n`);
+    
+  } catch (err) {
+    console.error('❌ Error:', err.message);
+  }
+}
+
 // Command-line argument handling
 const testType = process.argv[2]?.toUpperCase() || 'JS';
 
@@ -138,8 +196,10 @@ if (testType === 'JS') {
   analyzeDependenciesJS();
 } else if (testType === 'CPP') {
   analyzeDependenciesCpp();
+} else if (testType === 'PYTHON' || testType === 'PY') {
+  analyzeDependenciesPython();
 } else {
-  console.log('Valid options: JS (default), CPP');
-  console.log('Usage: node test_dependency.js [JS|CPP]');
+  console.log('Valid options: JS (default), CPP, PYTHON/PY');
+  console.log('Usage: node test_dependency.js [JS|CPP|PYTHON]');
   process.exit(1);
 }

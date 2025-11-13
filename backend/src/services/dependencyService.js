@@ -2,22 +2,28 @@
  * Dependency Analyzer - Core Functions Only
  */
 
+import { 
+  REGEX_PATTERNS, 
+  BUILTIN_MODULES, 
+  FILE_EXTENSIONS,
+  PATH_RESOLUTION_EXTENSIONS,
+  getLanguageFromExtension
+} from '../config/parserConfig.js';
+
 function parseJavaScriptFile(content, filePath) {
   const dependencies = [];
-  
-  const requireRegex = /require\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
   let match;
   
-  while ((match = requireRegex.exec(content)) !== null) {
+  // Parse require() statements
+  while ((match = REGEX_PATTERNS.javascript.require.exec(content)) !== null) {
     dependencies.push({
       module: match[1],
       type: classifyDependency(match[1])
     });
   }
   
-  const importRegex = /import\s+(?:(?:\{[^}]*\}|\*\s+as\s+\w+|\w+)\s+from\s+)?['"]([^'"]+)['"]/g;
-  
-  while ((match = importRegex.exec(content)) !== null) {
+  // Parse import statements
+  while ((match = REGEX_PATTERNS.javascript.import.exec(content)) !== null) {
     dependencies.push({
       module: match[1],
       type: classifyDependency(match[1])
@@ -29,12 +35,10 @@ function parseJavaScriptFile(content, filePath) {
 
 function parseCppFile(content, filePath) {
   const dependencies = [];
-  
-  // Match #include <header> (system headers)
-  const systemIncludeRegex = /#include\s*<([^>]+)>/g;
   let match;
   
-  while ((match = systemIncludeRegex.exec(content)) !== null) {
+  // Match #include <header> (system headers)
+  while ((match = REGEX_PATTERNS.cpp.systemInclude.exec(content)) !== null) {
     dependencies.push({
       module: match[1],
       type: 'builtin' // System/standard library headers
@@ -42,9 +46,7 @@ function parseCppFile(content, filePath) {
   }
   
   // Match #include "header" (local/project headers)
-  const localIncludeRegex = /#include\s*"([^"]+)"/g;
-  
-  while ((match = localIncludeRegex.exec(content)) !== null) {
+  while ((match = REGEX_PATTERNS.cpp.localInclude.exec(content)) !== null) {
     const header = match[1];
     dependencies.push({
       module: header,
@@ -55,12 +57,42 @@ function parseCppFile(content, filePath) {
   return { filePath, dependencies };
 }
 
+function parsePythonFile(content, filePath) {
+  const dependencies = [];
+  let match;
+  
+  // Parse import statements
+  while ((match = REGEX_PATTERNS.python.import.exec(content)) !== null) {
+    const moduleName = match[1].split('.')[0]; // Get base module (e.g., 'os' from 'os.path')
+    dependencies.push({
+      module: moduleName,
+      type: classifyPythonDependency(moduleName)
+    });
+  }
+  
+  // Parse from...import statements
+  while ((match = REGEX_PATTERNS.python.fromImport.exec(content)) !== null) {
+    const moduleName = match[1];
+    dependencies.push({
+      module: moduleName,
+      type: classifyPythonDependency(moduleName)
+    });
+  }
+  
+  return { filePath, dependencies };
+}
+
 // Main parser that detects file type and uses appropriate parser
 function parseFile(content, filePath) {
   const ext = filePath.substring(filePath.lastIndexOf('.'));
   
+  // Python files
+  if (FILE_EXTENSIONS.python.includes(ext)) {
+    return parsePythonFile(content, filePath);
+  }
+  
   // C/C++ files
-  if (['.cpp', '.cc', '.cxx', '.c', '.h', '.hpp', '.hxx'].includes(ext)) {
+  if (FILE_EXTENSIONS.cpp.includes(ext)) {
     return parseCppFile(content, filePath);
   }
   
@@ -71,14 +103,18 @@ function parseFile(content, filePath) {
 function classifyDependency(moduleName) {
   if (moduleName.startsWith('.')) return 'internal';
   
-  const builtinModules = [
-    'fs', 'path', 'http', 'https', 'crypto', 'os', 'util', 'events',
-    'stream', 'buffer', 'child_process', 'cluster', 'net', 'dgram',
-    'dns', 'readline', 'repl', 'tls', 'tty', 'url', 'querystring',
-    'zlib', 'assert', 'string_decoder', 'vm', 'v8', 'timers'
-  ];
+  if (BUILTIN_MODULES.javascript.includes(moduleName) || moduleName.startsWith('node:')) {
+    return 'builtin';
+  }
   
-  if (builtinModules.includes(moduleName) || moduleName.startsWith('node:')) {
+  return 'external';
+}
+
+function classifyPythonDependency(moduleName) {
+  // Relative imports (start with .)
+  if (moduleName.startsWith('.')) return 'internal';
+  
+  if (BUILTIN_MODULES.python.includes(moduleName)) {
     return 'builtin';
   }
   
@@ -88,6 +124,7 @@ function classifyDependency(moduleName) {
 function resolveImportPath(sourcePath, importPath, fileSet) {
   if (!importPath.startsWith('./') && !importPath.startsWith('../')) return null;
   
+  // Resolve the base path
   const sourceDir = sourcePath.substring(0, sourcePath.lastIndexOf('/'));
   const parts = sourceDir.split('/');
   const importParts = importPath.split('/');
@@ -99,33 +136,14 @@ function resolveImportPath(sourcePath, importPath, fileSet) {
   
   const basePath = parts.join('/');
   
-  // Try different extensions based on source file type
-  const sourceExt = sourcePath.substring(sourcePath.lastIndexOf('.'));
-  let possiblePaths = [];
+  // Get language-specific extensions to try
+  const language = getLanguageFromExtension(sourcePath);
+  const extensionsToTry = PATH_RESOLUTION_EXTENSIONS[language] || PATH_RESOLUTION_EXTENSIONS.javascript;
   
-  if (['.cpp', '.cc', '.cxx', '.c', '.h', '.hpp', '.hxx'].includes(sourceExt)) {
-    // C++ file extensions
-    possiblePaths = [
-      basePath + '.h',
-      basePath + '.hpp',
-      basePath + '.hxx',
-      basePath + '.cpp',
-      basePath + '.cc',
-      basePath + '.cxx',
-      basePath + '.c'
-    ];
-  } else {
-    // JavaScript/TypeScript extensions
-    possiblePaths = [
-      basePath + '.js',
-      basePath + '/index.js',
-      basePath + '.ts',
-      basePath + '/index.ts'
-    ];
-  }
-  
-  for (const p of possiblePaths) {
-    if (fileSet.has(p)) return p;
+  // Try each possible extension/path variant
+  for (const ext of extensionsToTry) {
+    const possiblePath = basePath + ext;
+    if (fileSet.has(possiblePath)) return possiblePath;
   }
   
   return null;
@@ -178,6 +196,7 @@ function exportDependencyGraphJSON(parsedFiles) {
 export default {
   parseJavaScriptFile,
   parseCppFile,
+  parsePythonFile,
   parseFile,
   exportDependencyGraphJSON
 };
