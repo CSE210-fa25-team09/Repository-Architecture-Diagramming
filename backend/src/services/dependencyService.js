@@ -260,42 +260,54 @@ function resolveImportPath(sourcePath, importPath, fileSet) {
   return null;
 }
 
-function exportDependencyGraphJSON(parsedFiles) {
-  const nodes = [];
-  const nodeSet = new Set();
-  const dependencyMap = {};
+function exportDependencyGraphWithTree(parsedFiles, repoTree) {
   const fileSet = new Set(parsedFiles.map(f => f.filePath));
+  const fileDependencyMap = new Map();
   
-  // Helper to add a node
-  const addNode = (name, type) => {
-    if (!nodeSet.has(name)) {
-      nodes.push({ name, type });
-      nodeSet.add(name);
-      dependencyMap[name] = [];
-    }
-  };
-  
-  // Add all source files as nodes
-  parsedFiles.forEach(file => addNode(file.filePath, 'code'));
-  
-  // Process dependencies
+  // Build dependency map for each file
   parsedFiles.forEach(file => {
+    const dependencies = [];
+    
     file.dependencies.forEach(dep => {
       if (dep.type === 'internal') {
         const resolvedTarget = resolveImportPath(file.filePath, dep.module, fileSet);
         if (resolvedTarget && fileSet.has(resolvedTarget)) {
-          addNode(resolvedTarget, 'code');
-          dependencyMap[file.filePath].push(resolvedTarget);
+          dependencies.push({ module: resolvedTarget, type: 'internal' });
         }
       } else {
-        const type = dep.type === 'builtin' ? 'builtin' : 'external';
-        addNode(dep.module, type);
-        dependencyMap[file.filePath].push(dep.module);
+        dependencies.push({ module: dep.module, type: dep.type });
       }
     });
+    
+    fileDependencyMap.set(file.filePath, dependencies);
   });
   
-  return { nodes, dependencies: dependencyMap };
+  // Add dependencies to tree structure
+  function addDependenciesToTree(nodes, currentPath = '') {
+    if (!Array.isArray(nodes)) return nodes;
+    
+    return nodes.map(node => {
+      const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
+      const newNode = { ...node };
+      
+      if (node.type === 'file') {
+        // Add dependencies if this file was analyzed
+        const deps = fileDependencyMap.get(fullPath);
+        if (deps && deps.length > 0) {
+          newNode.dependencies = deps;
+        } else {
+          newNode.dependencies = [];
+        }
+      } else if (node.type === 'dir' && node.children) {
+        // Recursively process children
+        newNode.children = addDependenciesToTree(node.children, fullPath);
+      }
+      
+      return newNode;
+    });
+  }
+  
+  return addDependenciesToTree(repoTree);
 }
 
 export default {
@@ -305,5 +317,5 @@ export default {
   parseJavaFile,
   parseGoFile,
   parseFile,
-  exportDependencyGraphJSON
+  exportDependencyGraphWithTree
 };
