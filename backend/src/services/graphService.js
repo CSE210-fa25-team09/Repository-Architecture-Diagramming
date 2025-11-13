@@ -4,7 +4,7 @@
  */
 
 // Shared helper functions
-const sanitizeLabel = (label) => label.replace(/["\[\]]/g, '');
+const sanitizeLabel = (label) => label.replace(/["[\]]/g, '');
 const getFileName = (path) => path.split('/').pop();
 
 /**
