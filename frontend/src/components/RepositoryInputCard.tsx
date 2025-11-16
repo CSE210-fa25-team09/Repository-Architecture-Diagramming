@@ -23,22 +23,7 @@ export default function RepositoryInputCard() {
       setZipFile(e.target.files[0])
     }
   }
-  /** 
-  function handleZipUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    //checks if the file ends with a .zip
-    if (!file.name.endsWith(".zip")) {
-      //Sets the error msg to and set the state of the zipfull to null
-      setError("Uploaded file must be a .zip archive.")
-      setZipFile(null)
-      return
-    }
-    //Valid zip file, sets the error msg to be empty, sets the zipfile state to the file 
-    setError("")
-    setZipFile(file)
-  }
-    */
+
   function validateInputs() {
     if (isValidRepoUrl(repoUrl)) return { ok: true, type: "url" as const }
     if (zipFile) return { ok: true, type: "zip" as const }
