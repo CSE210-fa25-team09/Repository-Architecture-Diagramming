@@ -30,14 +30,7 @@ function App() {
           />
           <Separator className="bg-[color:var(--panel-border)]" />
           <Routes>
-            <Route
-              path="/"
-              element={
-                <div className="flex flex-col">
-                  <Home />
-                </div>
-              }
-            />
+            <Route path="/" element={<Home />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
