@@ -51,7 +51,7 @@ export default function RepositoryInputCard() {
   return (
     <Card className="relative w-full max-w-none bg-[var(--panel-bg)] ">
       <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-1">
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
             <Label
               htmlFor="repo-url"
@@ -61,22 +61,14 @@ export default function RepositoryInputCard() {
             </Label>
 
             {/* Input for user to enter github url and sets the repo url state to the user input */}
-            <div className="flex flex-col w-full gap-2 md:flex-1">
-              <Input
-                id="repo-url"
-                value={repoUrl}
-                onChange={(e) => setRepoUrl(e.target.value)}
-                placeholder="https://github.com/username/repo"
-                className="h-12 w-full border border-[color:var(--input-border)] bg-[var(--input-bg)] px-4 text-base text-[var(--page-foreground)] shadow-sm placeholder:text-[var(--input-placeholder)] focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring)]"
-              />
-              {/* Button for user to generate diagrams which also checks if the user inputed in a valid github url or zip file*/}
-              {error && (
-                <p className="absolute left-0 top-full mt-1 text-sm text-red-500 font-medium">
-                  {error}
-                </p>
-              )}
-            </div>
-
+            <Input
+              id="repo-url"
+              value={repoUrl}
+              onChange={(e) => setRepoUrl(e.target.value)}
+              placeholder="https://github.com/username/repo"
+              className="h-12 w-full border border-[color:var(--input-border)] bg-[var(--input-bg)] px-4 text-base text-[var(--page-foreground)] shadow-sm placeholder:text-[var(--input-placeholder)] focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring)]"
+            />
+            {/* Button for user to generate diagrams which also checks if the user inputed in a valid github url or zip file*/}
             <Button
               size="lg"
               type="submit"
@@ -85,8 +77,14 @@ export default function RepositoryInputCard() {
               Generate Diagram
             </Button>
           </div>
+          {error && (
+            <div className="flex flex-col md:flex-row">
+              <p className="text-sm text-red-500 font-medium md:flex-1">{error}</p>
+            </div>
+          )}
         </form>
       </CardContent>
+
       <CardContent>
         <div className="flex flex-wrap items-center gap-3 text-sm text-[color:var(--muted-text)]">
           <Separator

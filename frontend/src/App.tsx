@@ -6,7 +6,7 @@ import { Separator } from "./components/ui/separator"
 import { getSystemTheme, type Theme } from "./lib/utils"
 import { Home } from "./pages/Home"
 import { NotFound } from "./pages/NotFound"
-import RepositoryInputCard from "./components/RepositoryInputCard"
+
 function App() {
   const [theme, setTheme] = useState<Theme>(() => getSystemTheme())
   const isDark = theme === "dark"
@@ -28,16 +28,13 @@ function App() {
             isDark={isDark}
             onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
           />
-          <Separator></Separator>
-
+          <Separator className="bg-[color:var(--panel-border)]" />
           <Routes>
             <Route
               path="/"
               element={
                 <div className="flex flex-col">
-                  <RepositoryInputCard />
                   <Home />
-                  {/* ⬅ Only show on home */}
                 </div>
               }
             />
