@@ -7,4 +7,12 @@ node_modules/
 # Logs
 *.log
 
+# Temporary analysis output
+dependency_graphs/*
+!dependency_graphs/Repository-Architecture-Diagramming_*.json
+
+# Mermaid diagrams (keep Repository-Architecture-Diagramming demo)
+mermaid_diagrams/*
+!mermaid_diagrams/Repository-Architecture-Diagramming_*/
+!mermaid_diagrams/Repository-Architecture-Diagramming_*/**
 *.DS_Store
