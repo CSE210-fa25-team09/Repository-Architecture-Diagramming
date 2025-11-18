@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dependency Diagrams - Repository-Architecture-Diagramming (main@ca7daad)</title>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+  </script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+    .diagram-container { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    h1, h2 { color: #333; }
+    .legend { margin: 20px 0; padding: 15px; background: #f0f0f0; border-radius: 5px; }
+    .legend-item { display: inline-block; margin: 5px 15px 5px 0; }
+    .legend-color { display: inline-block; width: 20px; height: 20px; margin-right: 5px; vertical-align: middle; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <h1>Repository Dependency Diagrams</h1>
+  <p><strong>Repository:</strong> Repository-Architecture-Diagramming | <strong>Branch:</strong> main | <strong>Commit:</strong> ca7daad</p>
+  
+  <div class="legend">
+    <h3>Legend:</h3>
+    <div class="legend-item">
+      <span class="legend-color" style="background: #4A90E2;"></span>
+      <span>Source Files</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-color" style="background: #50C878;"></span>
+      <span>Internal Dependencies</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-color" style="background: #FF6B6B;"></span>
+      <span>External Dependencies</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-color" style="background: #FFA500;"></span>
+      <span>Built-in Modules</span>
+    </div>
+  </div>
+
+  <div class="diagram-container">
+    <h2>1. Internal Dependencies Only (Project Structure)</h2>
+    <p>This diagram shows only the dependencies between files within the project, excluding external libraries.</p>
+    <pre class="mermaid">
+graph LR
+    node8["App.tsx"] --> node9["Header.tsx"]
+    node8["App.tsx"] --> node10["separator.tsx"]
+    node8["App.tsx"] --> node11["utils.ts"]
+    node8["App.tsx"] --> node12["Home.tsx"]
+    node8["App.tsx"] --> node13["NotFound.tsx"]
+    node21["App.test.tsx"] --> node8["App.tsx"]
+
+    %% Styling
+    classDef codeStyle fill:#4A90E2,stroke:#2E5C8A,stroke-width:2px,color:#fff
+    class node0,node1,node2,node3,node4,node5,node6,node7,node8,node9,node14,node15,node16,node17,node18,node19,node10,node11,node20,node21,node22,node23 codeStyle
+    classDef internalStyle fill:#50C878,stroke:#2E7D4E,stroke-width:2px,color:#fff
+    class node9,node10,node11,node12,node13,node8 internalStyle
+    </pre>
+    <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 5px;">
+      <strong>Statistics:</strong>
+      <ul style="margin: 10px 0;">
+        <li>Nodes: 7</li>
+        <li>Edges: 6</li>
+        <li>Average Degree: 0.86</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="diagram-container">
+    <h2>2. All Dependencies (Including External Libraries)</h2>
+    <p>This diagram shows all dependencies including external packages and built-in modules.</p>
+    <pre class="mermaid">
+graph LR
+    node0["dependencyService.js"] --> node1["package"]
+    node2["githubService.js"] --> node3["@octokit/rest"]
+    node4["test_dependency.js"] --> node5["dotenv/config"]
+    node4["test_dependency.js"] --> node6["fs/promises"]
+    node4["test_dependency.js"] --> node7["path"]
+    node8["test_github_api.js"] --> node5["dotenv/config"]
+    node9["test_mermaid.js"] --> node5["dotenv/config"]
+    node9["test_mermaid.js"] --> node6["fs/promises"]
+    node9["test_mermaid.js"] --> node7["path"]
+    node9["test_mermaid.js"] --> node10["https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs"]
+    node11["eslint.config.mjs"] --> node12["@eslint/js"]
+    node11["eslint.config.mjs"] --> node13["globals"]
+    node11["eslint.config.mjs"] --> node14["eslint/config"]
+    node11["eslint.config.mjs"] --> node15["eslint-plugin-jsdoc"]
+    node16["eslint.config.js"] --> node12["@eslint/js"]
+    node16["eslint.config.js"] --> node13["globals"]
+    node16["eslint.config.js"] --> node17["eslint-plugin-react-hooks"]
+    node16["eslint.config.js"] --> node18["eslint-plugin-react-refresh"]
+    node16["eslint.config.js"] --> node19["typescript-eslint"]
+    node16["eslint.config.js"] --> node14["eslint/config"]
+    node20["prettier.config.mjs"] --> node21["prettier"]
+    node22["App.tsx"] --> node23["react"]
+    node22["App.tsx"] --> node24["react-router-dom"]
+    node22["App.tsx"] --> node25["Header.tsx"]
+    node22["App.tsx"] --> node26["separator.tsx"]
+    node22["App.tsx"] --> node27["utils.ts"]
+    node22["App.tsx"] --> node28["Home.tsx"]
+    node22["App.tsx"] --> node29["NotFound.tsx"]
+    node25["Header.tsx"] --> node23["react"]
+    node25["Header.tsx"] --> node30["lucide-react"]
+    node25["Header.tsx"] --> node24["react-router-dom"]
+    node25["Header.tsx"] --> node31["@/components/ui/button"]
+    node32["button.tsx"] --> node23["react"]
+    node32["button.tsx"] --> node33["@radix-ui/react-slot"]
+    node32["button.tsx"] --> node34["class-variance-authority"]
+    node32["button.tsx"] --> node35["@/lib/utils"]
+    node36["card.tsx"] --> node23["react"]
+    node36["card.tsx"] --> node35["@/lib/utils"]
+    node37["dropdown-menu.tsx"] --> node23["react"]
+    node37["dropdown-menu.tsx"] --> node38["@radix-ui/react-dropdown-menu"]
+    node37["dropdown-menu.tsx"] --> node30["lucide-react"]
+    node37["dropdown-menu.tsx"] --> node35["@/lib/utils"]
+    node39["input.tsx"] --> node23["react"]
+    node39["input.tsx"] --> node35["@/lib/utils"]
+    node40["label.tsx"] --> node23["react"]
+    node40["label.tsx"] --> node41["@radix-ui/react-label"]
+    node40["label.tsx"] --> node35["@/lib/utils"]
+    node42["scroll-area.tsx"] --> node23["react"]
+    node42["scroll-area.tsx"] --> node43["@radix-ui/react-scroll-area"]
+    node42["scroll-area.tsx"] --> node35["@/lib/utils"]
+    node26["separator.tsx"] --> node23["react"]
+    node26["separator.tsx"] --> node44["@radix-ui/react-separator"]
+    node26["separator.tsx"] --> node35["@/lib/utils"]
+    node27["utils.ts"] --> node45["clsx"]
+    node27["utils.ts"] --> node46["tailwind-merge"]
+    node47["main.tsx"] --> node23["react"]
+    node47["main.tsx"] --> node48["react-dom/client"]
+    node47["main.tsx"] --> node24["react-router-dom"]
+    node49["App.test.tsx"] --> node50["@testing-library/jest-dom/vitest"]
+    node49["App.test.tsx"] --> node51["@testing-library/react"]
+    node49["App.test.tsx"] --> node24["react-router-dom"]
+    node49["App.test.tsx"] --> node52["vitest"]
+    node49["App.test.tsx"] --> node22["App.tsx"]
+    node53["utils.test.ts"] --> node35["@/lib/utils"]
+    node53["utils.test.ts"] --> node52["vitest"]
+    node54["vite.config.ts"] --> node7["path"]
+    node54["vite.config.ts"] --> node55["@tailwindcss/vite"]
+    node54["vite.config.ts"] --> node56["@vitejs/plugin-react"]
+    node54["vite.config.ts"] --> node57["vite"]
+    node54["vite.config.ts"] --> node58["vitest/config"]
+
+    %% Styling
+    classDef codeStyle fill:#4A90E2,stroke:#2E5C8A,stroke-width:2px,color:#fff
+    class node0,node2,node4,node8,node9,node11,node16,node20,node22,node25,node32,node36,node37,node39,node40,node42,node26,node27,node47,node49,node53,node54 codeStyle
+    classDef internalStyle fill:#50C878,stroke:#2E7D4E,stroke-width:2px,color:#fff
+    class node25,node26,node27,node28,node29,node22 internalStyle
+    classDef externalStyle fill:#FF6B6B,stroke:#C92A2A,stroke-width:2px,color:#fff
+    class node1,node3,node5,node6,node10,node12,node13,node14,node15,node17,node18,node19,node21,node23,node24,node30,node31,node33,node34,node35,node38,node41,node43,node44,node45,node46,node48,node50,node51,node52,node55,node56,node57,node58 externalStyle
+    classDef builtinStyle fill:#FFA500,stroke:#CC8400,stroke-width:2px,color:#fff
+    class node7 builtinStyle
+    </pre>
+    <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 5px;">
+      <strong>Statistics:</strong>
+      <ul style="margin: 10px 0;">
+        <li>Nodes: 59</li>
+        <li>Edges: 70</li>
+        <li>Average Degree: 1.19</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

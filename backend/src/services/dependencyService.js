@@ -358,6 +358,71 @@ function extractFilesByLanguage(tree, language = 'all') {
   return codeFiles;
 }
 
+/**
+ * Analyze dependencies for a repository
+ * @param {Object} githubService - GitHub service instance
+ * @param {string} owner - Repository owner
+ * @param {string} repo - Repository name
+ * @param {string} branch - Branch name
+ * @param {Object} options - Analysis options
+ * @returns {Object} Analysis result with tree, parsedFiles, and metadata
+ */
+async function analyzeDependencies(githubService, owner, repo, branch, options = {}) {
+  const { maxFiles = 1000, language = 'all' } = options;
+  
+  try {
+    // Get repository tree
+    const tree = await githubService.getRepoTree(owner, repo, '', branch);
+    
+    // Extract files by language
+    const allCodeFiles = extractFilesByLanguage(tree, language);
+    const filesToAnalyze = maxFiles ? allCodeFiles.slice(0, maxFiles) : allCodeFiles;
+    
+    console.log(`Found ${allCodeFiles.length} files, analyzing ${filesToAnalyze.length}`);
+    
+    // Parse all files
+    const parsedFiles = [];
+    for (const filePath of filesToAnalyze) {
+      const content = await githubService.getFile(owner, repo, filePath, branch);
+      const parsed = parseFile(content, filePath);
+      parsedFiles.push(parsed);
+      
+      if (options.verbose) {
+        console.log(`✓ ${filePath} (${parsed.dependencies.length} deps)`);
+      }
+    }
+    
+    // Export dependency graph with tree structure
+    const treeWithDeps = exportDependencyGraphWithTree(parsedFiles, tree);
+    
+    // Get commit SHA for versioning
+    const commitSha = await githubService.getLatestCommit(owner, repo, branch);
+    
+    return {
+      success: true,
+      data: {
+        tree: treeWithDeps,
+        parsedFiles,
+        metadata: {
+          owner,
+          repo,
+          branch,
+          commitSha,
+          totalFiles: allCodeFiles.length,
+          analyzedFiles: parsedFiles.length,
+          language,
+          timestamp: new Date().toISOString()
+        }
+      }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
 export default {
   parseJSTSFile,
   parseCppFile,
@@ -366,5 +431,6 @@ export default {
   parseGoFile,
   parseFile,
   exportDependencyGraphWithTree,
-  extractFilesByLanguage
+  extractFilesByLanguage,
+  analyzeDependencies
 };
