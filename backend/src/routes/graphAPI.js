@@ -1,4 +1,6 @@
 import express from 'express';
+import fs from 'fs/promises';
+import path from 'path';
 import graphService from '../services/graphService.js';
 import dependencyService from '../services/dependencyService.js';
 import dotenv from 'dotenv';
@@ -11,7 +13,7 @@ const graphRouter = express.Router();
 
 // Endpoint to get Mermaid diagrams
 graphRouter.get('/api/getMermaid', async (req, res) => {
-  const { owner, repo, branch, language = 'all' } = req.query;
+  const { owner, repo, branch } = req.query;
 
   if (!owner || !repo) {
     return res.status(400).json({ 
@@ -21,16 +23,41 @@ graphRouter.get('/api/getMermaid', async (req, res) => {
 
   try {
     const queryBranch = branch || await githubService.getDefaultBranch(owner, repo);
+    
+    // Get commit SHA for cache key
+    const commitSha = await githubService.getLatestCommit(owner, repo, queryBranch);
+    const folderName = `${repo}_${queryBranch}_${commitSha}`;
+    const cacheDir = path.join(process.cwd(), 'mermaid_diagrams', folderName);
+    
+    // Check if cached diagrams exist
+    const internalPath = path.join(cacheDir, 'internal_dependencies.mmd');
+    const allPath = path.join(cacheDir, 'all_dependencies.mmd');
+    
+    try {
+      const [internalDependencies, allDependencies] = await Promise.all([
+        fs.readFile(internalPath, 'utf-8'),
+        fs.readFile(allPath, 'utf-8')
+      ]);
+      
+      console.log(`✅ Retrieved cached diagrams for ${owner}/${repo} (${queryBranch}@${commitSha})\n`);
+      
+      return res.json({
+        allDependencies,
+        internalDependencies
+      });
+    } catch (cacheErr) {
+      // Cache miss - generate new diagrams
+      console.log(`Cache miss for ${owner}/${repo} (${queryBranch}@${commitSha})`);
+      console.log(`Generating new Mermaid diagrams...`);
+    }
 
-    console.log(`Generating Mermaid diagrams for ${owner}/${repo} (${queryBranch})`);
-
-    // Analyze dependencies
+    // Analyze dependencies (analyze all files)
     const result = await dependencyService.analyzeDependencies(
       githubService, 
       owner, 
       repo, 
       queryBranch, 
-      { maxFiles, language }
+      { maxFiles }
     );
 
     if (!result.success) {
@@ -48,7 +75,14 @@ graphRouter.get('/api/getMermaid', async (req, res) => {
       { styled: true, showExternal: false, showBuiltin: false }
     );
 
-    console.log(`✅ Generated diagrams\n`);
+    // Cache the diagrams
+    await fs.mkdir(cacheDir, { recursive: true });
+    await Promise.all([
+      fs.writeFile(internalPath, internalDependencies, 'utf-8'),
+      fs.writeFile(allPath, allDependencies, 'utf-8')
+    ]);
+
+    console.log(`✅ Generated and cached diagrams for ${owner}/${repo} (${queryBranch}@${commitSha})\n`);
 
     res.json({
       allDependencies,

@@ -16,7 +16,6 @@ async function testAnalyzeDependenciesAndGenerateHTML() {
   const owner = 'CSE210-fa25-team09';
   const repo = 'Repository-Architecture-Diagramming';
   const branch = 'main';
-  const language = 'jsts';
   
   try {
     // Run dependency analysis (analyze all files for complete diagram)
@@ -25,7 +24,7 @@ async function testAnalyzeDependenciesAndGenerateHTML() {
       owner,
       repo,
       branch,
-      { language }  // No maxFiles limit - analyze all files
+      {}  // No limits - analyze all files
     );
     
     if (!result.success) {
@@ -102,7 +101,6 @@ async function testAnalyzeDependenciesAndGenerateHTML() {
     <strong>Repository:</strong> ${owner}/${repo}<br>
     <strong>Branch:</strong> ${branch}<br>
     <strong>Commit:</strong> ${commitSha}<br>
-    <strong>Language:</strong> ${language}<br>
     <strong>Generated:</strong> ${new Date().toLocaleString()}<br>
   </div>
   
@@ -161,8 +159,8 @@ ${allDiagram}
   <div class="info" style="background: #f1f8e9;">
     <h3>API Endpoint Information</h3>
     <p><strong>GET /api/getMermaid</strong></p>
-    <p>Query params: owner, repo, branch (optional), language (optional)</p>
-    <p>Example: <code>http://localhost:3000/api/getMermaid?owner=${owner}&repo=${repo}&branch=${branch}&language=${language}</code></p>
+    <p>Query params: owner, repo, branch (optional)</p>
+    <p>Example: <code>http://localhost:3000/api/getMermaid?owner=${owner}&repo=${repo}&branch=${branch}</code></p>
     <p>Returns: <code>{ "allDependencies": "graph LR\\n...", "internalDependencies": "graph LR\\n..." }</code></p>
   </div>
 </body>
