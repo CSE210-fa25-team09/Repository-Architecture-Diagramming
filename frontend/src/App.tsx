@@ -4,6 +4,7 @@ import { Route, Routes } from "react-router-dom"
 import { Header } from "./components/shared/Header"
 import { Separator } from "./components/ui/separator"
 import { getSystemTheme, type Theme } from "./lib/utils"
+import { Diagram } from "./pages/Diagram"
 import { Home } from "./pages/Home"
 import { NotFound } from "./pages/NotFound"
 
@@ -33,6 +34,7 @@ function App() {
 
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/diagram" element={<Diagram />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
