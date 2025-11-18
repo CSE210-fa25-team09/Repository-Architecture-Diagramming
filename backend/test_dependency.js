@@ -32,9 +32,9 @@ async function analyzeDependenciesJS() {
     const outputDir = path.join(process.cwd(), 'dependency_graphs');
     await fs.mkdir(outputDir, { recursive: true });
     
-    // Generate filename with timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
-    const filename = `${repo}_${branch}_${timestamp}.json`;
+    // Get the latest commit SHA for filename
+    const commitSha = await githubService.getLatestCommit(owner, repo, branch);
+    const filename = `${repo}_${branch}_${commitSha}.json`;
     const outputPath = path.join(outputDir, filename);
     
     await fs.writeFile(outputPath, JSON.stringify({ name: repo, type: 'dir', children: treeWithDeps }, null, 2), 'utf-8');
@@ -76,8 +76,8 @@ async function analyzeDependenciesCpp() {
     const outputDir = path.join(process.cwd(), 'dependency_graphs');
     await fs.mkdir(outputDir, { recursive: true });
     
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
-    const filename = `${repo}_${branch}_${timestamp}.json`;
+    const commitSha = await githubService.getLatestCommit(owner, repo, branch);
+    const filename = `${repo}_${branch}_${commitSha}.json`;
     const outputPath = path.join(outputDir, filename);
     
     await fs.writeFile(outputPath, JSON.stringify({ name: repo, type: "dir", children: graphJSON }, null, 2), 'utf-8');
@@ -118,8 +118,8 @@ async function analyzeDependenciesPython() {
     const outputDir = path.join(process.cwd(), 'dependency_graphs');
     await fs.mkdir(outputDir, { recursive: true });
     
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
-    const filename = `${repo}_${branch}_${timestamp}.json`;
+    const commitSha = await githubService.getLatestCommit(owner, repo, branch);
+    const filename = `${repo}_${branch}_${commitSha}.json`;
     const outputPath = path.join(outputDir, filename);
     
     await fs.writeFile(outputPath, JSON.stringify({ name: repo, type: "dir", children: graphJSON }, null, 2), 'utf-8');
@@ -160,8 +160,8 @@ async function analyzeDependenciesJava() {
     const outputDir = path.join(process.cwd(), 'dependency_graphs');
     await fs.mkdir(outputDir, { recursive: true });
     
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
-    const filename = `${repo}_${branch}_${timestamp}.json`;
+    const commitSha = await githubService.getLatestCommit(owner, repo, branch);
+    const filename = `${repo}_${branch}_${commitSha}.json`;
     const outputPath = path.join(outputDir, filename);
     
     await fs.writeFile(outputPath, JSON.stringify({ name: repo, type: "dir", children: graphJSON }, null, 2), 'utf-8');
@@ -203,8 +203,8 @@ async function analyzeDependenciesGo() {
     const outputDir = './dependency_graphs';
     await fs.mkdir(outputDir, { recursive: true });
     
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
-    const filename = `${repo}_${branch}_${timestamp}.json`;
+    const commitSha = await githubService.getLatestCommit(owner, repo, branch);
+    const filename = `${repo}_${branch}_${commitSha}.json`;
     const outputPath = path.join(outputDir, filename);
     
     await fs.writeFile(outputPath, JSON.stringify({ name: repo, type: "dir", children: graphJSON }, null, 2), 'utf-8');
@@ -246,8 +246,8 @@ async function analyzeDependenciesTS() {
     const outputDir = './dependency_graphs';
     await fs.mkdir(outputDir, { recursive: true });
     
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
-    const filename = `${repo}_${branch}_${timestamp}.json`;
+    const commitSha = await githubService.getLatestCommit(owner, repo, branch);
+    const filename = `${repo}_${branch}_${commitSha}.json`;
     const outputPath = path.join(outputDir, filename);
     
     await fs.writeFile(outputPath, JSON.stringify({ name: repo, type: "dir", children: graphJSON }, null, 2), 'utf-8');
@@ -309,8 +309,8 @@ async function analyzeDependenciesMixed() {
     const outputDir = './dependency_graphs';
     await fs.mkdir(outputDir, { recursive: true });
     
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
-    const filename = `${repo}_${branch}_${timestamp}_mixed.json`;
+    const commitSha = await githubService.getLatestCommit(owner, repo, branch);
+    const filename = `${repo}_${branch}_${commitSha}_mixed.json`;
     const outputPath = path.join(outputDir, filename);
     
     await fs.writeFile(outputPath, JSON.stringify({ name: repo, type: "dir", children: graphJSON }, null, 2), 'utf-8');

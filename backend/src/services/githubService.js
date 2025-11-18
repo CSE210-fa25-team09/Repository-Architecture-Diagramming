@@ -135,13 +135,66 @@ async function getAllBranches(owner, repo) {
   return response.map(branch => branch.name);
 }
 
+async function getDefaultBranch(owner, repo) {
+  const response = await octokit.repos.get({
+    "owner": owner,
+    "repo": repo
+  });
+  updateRateLimitFromHeaders(response.headers);
+  return response.data.default_branch;
+}
 
+async function getAllCommits(owner, repo, branch="") {
+  if (!branch) {
+    branch = await getDefaultBranch(owner, repo);
+  }
+  const commits = await octokit.paginate(octokit.repos.listCommits, {
+    "owner": owner, 
+    "repo": repo, 
+    "ref": branch,
+    "per_page": 100
+  });
+  // Format the commits
+  const formattedCommits = commits.map((commit) => {
+    return {
+      sha: commit.sha,
+      message: commit.commit.message,
+      author: commit.commit.author.name,
+      date: commit.commit.author.date
+    };
+  });
+  return formattedCommits;
+}
+
+async function getLatestCommit(owner, repo, branch = "") {
+  if (!branch) {
+    const response = await octokit.repos.get({
+      "owner": owner,
+      "repo": repo
+    });
+    updateRateLimitFromHeaders(response.headers);
+    branch = response.data.default_branch;
+  }
+  
+  const response = await octokit.repos.listCommits({
+    "owner": owner,
+    "repo": repo,
+    "sha": branch,
+    "per_page": 1
+  });
+  updateRateLimitFromHeaders(response.headers);
+  
+  return response.data[0]?.sha?.substring(0, 7) || 'unknown'; // Return short SHA (7 chars)
+}
 
 const githubService = {
   getContent,
   getRepoTree,
   getFile,
   getAllBranches,
+  getDefaultBranch,
+  getAllCommits,
+  getLatestCommit,
   getRateLimit
 };
 

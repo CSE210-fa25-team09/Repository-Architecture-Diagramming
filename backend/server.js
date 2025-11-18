@@ -10,6 +10,7 @@ dotenv.config();
 import express from 'express';
 import cors from 'cors';
 import githubRouter from './src/routes/githubAPI.js';
+import graphRouter from './src/routes/graphAPI.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -34,6 +35,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use(githubRouter);
+app.use(graphRouter);
 
 // 404 handler
 app.use((req, res) => {

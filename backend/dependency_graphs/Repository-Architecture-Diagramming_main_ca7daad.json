@@ -3,6 +3,12 @@
   "type": "dir",
   "children": [
     {
+      "name": ".DS_Store",
+      "type": "file",
+      "path": ".DS_Store",
+      "dependencies": []
+    },
+    {
       "name": ".github",
       "type": "dir",
       "path": ".github",
@@ -85,6 +91,12 @@
       "path": "backend",
       "children": [
         {
+          "name": ".DS_Store",
+          "type": "file",
+          "path": "backend/.DS_Store",
+          "dependencies": []
+        },
+        {
           "name": ".env.example",
           "type": "file",
           "path": "backend/.env.example",
@@ -95,6 +107,88 @@
           "type": "file",
           "path": "backend/.gitignore",
           "dependencies": []
+        },
+        {
+          "name": "data",
+          "type": "dir",
+          "path": "backend/data",
+          "children": [
+            {
+              "name": "api_analytics.png",
+              "type": "file",
+              "path": "backend/data/api_analytics.png",
+              "dependencies": []
+            },
+            {
+              "name": "bootstrap.png",
+              "type": "file",
+              "path": "backend/data/bootstrap.png",
+              "dependencies": []
+            },
+            {
+              "name": "lodash.png",
+              "type": "file",
+              "path": "backend/data/lodash.png",
+              "dependencies": []
+            },
+            {
+              "name": "prettier.png",
+              "type": "file",
+              "path": "backend/data/prettier.png",
+              "dependencies": []
+            },
+            {
+              "name": "vscode.png",
+              "type": "file",
+              "path": "backend/data/vscode.png",
+              "dependencies": []
+            }
+          ]
+        },
+        {
+          "name": "dependency_graphs",
+          "type": "dir",
+          "path": "backend/dependency_graphs",
+          "children": [
+            {
+              "name": "Repository-Architecture-Diagramming_main_61c74b7.json",
+              "type": "file",
+              "path": "backend/dependency_graphs/Repository-Architecture-Diagramming_main_61c74b7.json",
+              "dependencies": []
+            }
+          ]
+        },
+        {
+          "name": "mermaid_diagrams",
+          "type": "dir",
+          "path": "backend/mermaid_diagrams",
+          "children": [
+            {
+              "name": "Repository-Architecture-Diagramming_main_61c74b7",
+              "type": "dir",
+              "path": "backend/mermaid_diagrams/Repository-Architecture-Diagramming_main_61c74b7",
+              "children": [
+                {
+                  "name": "all_dependencies.mmd",
+                  "type": "file",
+                  "path": "backend/mermaid_diagrams/Repository-Architecture-Diagramming_main_61c74b7/all_dependencies.mmd",
+                  "dependencies": []
+                },
+                {
+                  "name": "diagrams.html",
+                  "type": "file",
+                  "path": "backend/mermaid_diagrams/Repository-Architecture-Diagramming_main_61c74b7/diagrams.html",
+                  "dependencies": []
+                },
+                {
+                  "name": "internal_dependencies.mmd",
+                  "type": "file",
+                  "path": "backend/mermaid_diagrams/Repository-Architecture-Diagramming_main_61c74b7/internal_dependencies.mmd",
+                  "dependencies": []
+                }
+              ]
+            }
+          ]
         },
         {
           "name": "package-lock.json",
@@ -109,15 +203,45 @@
           "dependencies": []
         },
         {
+          "name": "sample_swe_diag.json",
+          "type": "file",
+          "path": "backend/sample_swe_diag.json",
+          "dependencies": []
+        },
+        {
           "name": "src",
           "type": "dir",
           "path": "backend/src",
           "children": [
             {
+              "name": "config",
+              "type": "dir",
+              "path": "backend/src/config",
+              "children": [
+                {
+                  "name": "parserConfig.js",
+                  "type": "file",
+                  "path": "backend/src/config/parserConfig.js",
+                  "dependencies": []
+                }
+              ]
+            },
+            {
               "name": "services",
               "type": "dir",
               "path": "backend/src/services",
               "children": [
+                {
+                  "name": "dependencyService.js",
+                  "type": "file",
+                  "path": "backend/src/services/dependencyService.js",
+                  "dependencies": [
+                    {
+                      "module": "package",
+                      "type": "external"
+                    }
+                  ]
+                },
                 {
                   "name": "githubService.js",
                   "type": "file",
@@ -128,18 +252,66 @@
                       "type": "external"
                     }
                   ]
+                },
+                {
+                  "name": "graphService.js",
+                  "type": "file",
+                  "path": "backend/src/services/graphService.js",
+                  "dependencies": []
                 }
               ]
             }
           ]
         },
         {
-          "name": "test.js",
+          "name": "test_dependency.js",
           "type": "file",
-          "path": "backend/test.js",
+          "path": "backend/test_dependency.js",
           "dependencies": [
             {
               "module": "dotenv/config",
+              "type": "external"
+            },
+            {
+              "module": "fs/promises",
+              "type": "external"
+            },
+            {
+              "module": "path",
+              "type": "builtin"
+            }
+          ]
+        },
+        {
+          "name": "test_github_api.js",
+          "type": "file",
+          "path": "backend/test_github_api.js",
+          "dependencies": [
+            {
+              "module": "dotenv/config",
+              "type": "external"
+            }
+          ]
+        },
+        {
+          "name": "test_mermaid.js",
+          "type": "file",
+          "path": "backend/test_mermaid.js",
+          "dependencies": [
+            {
+              "module": "dotenv/config",
+              "type": "external"
+            },
+            {
+              "module": "fs/promises",
+              "type": "external"
+            },
+            {
+              "module": "path",
+              "type": "builtin"
+            },
+            {
+              "module": "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs",
               "type": "external"
             }
           ]
