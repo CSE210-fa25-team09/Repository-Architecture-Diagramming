@@ -310,6 +310,54 @@ function exportDependencyGraphWithTree(parsedFiles, repoTree) {
   return addDependenciesToTree(repoTree);
 }
 
+/**
+ * Extract files from a tree structure by language
+ * @param {Array|Object} tree - The tree structure (array of nodes or single root node)
+ * @param {string} language - Language name ('jsts', 'cpp', 'python', 'java', 'go', or 'all')
+ * @returns {Array} Array of file paths matching the language
+ */
+function extractFilesByLanguage(tree, language = 'all') {
+  const codeFiles = [];
+  
+  // Determine which extensions to look for
+  let targetExtensions;
+  if (language === 'all') {
+    targetExtensions = [
+      ...FILE_EXTENSIONS.jsts,
+      ...FILE_EXTENSIONS.cpp,
+      ...FILE_EXTENSIONS.python,
+      ...FILE_EXTENSIONS.java,
+      ...FILE_EXTENSIONS.go
+    ];
+  } else if (FILE_EXTENSIONS[language]) {
+    targetExtensions = FILE_EXTENSIONS[language];
+  } else {
+    throw new Error(`Unknown language: ${language}. Use 'jsts', 'cpp', 'python', 'java', 'go', or 'all'`);
+  }
+  
+  function traverse(nodes, currentPath = '') {
+    if (!Array.isArray(nodes)) return;
+    nodes.forEach(node => {
+      const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
+      const ext = node.name.substring(node.name.lastIndexOf('.'));
+      if (node.type === 'file' && targetExtensions.includes(ext)) {
+        codeFiles.push(fullPath);
+      } else if (node.type === 'dir' && node.children) {
+        traverse(node.children, fullPath);
+      }
+    });
+  }
+  
+  // Handle both array of nodes and single root node with children
+  if (Array.isArray(tree)) {
+    traverse(tree);
+  } else if (tree && tree.children) {
+    traverse(tree.children, tree.path || '');
+  }
+  
+  return codeFiles;
+}
+
 export default {
   parseJSTSFile,
   parseCppFile,
@@ -317,5 +365,6 @@ export default {
   parseJavaFile,
   parseGoFile,
   parseFile,
-  exportDependencyGraphWithTree
+  exportDependencyGraphWithTree,
+  extractFilesByLanguage
 };
