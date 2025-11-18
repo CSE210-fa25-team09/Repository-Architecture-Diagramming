@@ -1,4 +1,8 @@
 import { Octokit } from "@octokit/rest";
+import dotenv from 'dotenv';
+
+// Ensure environment variables are loaded
+dotenv.config();
 
 // Rate limited to 60 req per hour without GITHUB_TOKEN, 5000 with token
 const octokit = process.env.GITHUB_TOKEN
