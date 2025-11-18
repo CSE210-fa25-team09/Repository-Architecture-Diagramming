@@ -386,33 +386,15 @@ async function analyzeDependencies(githubService, owner, repo, branch, options =
       const content = await githubService.getFile(owner, repo, filePath, branch);
       const parsed = parseFile(content, filePath);
       parsedFiles.push(parsed);
-      
-      if (options.verbose) {
-        console.log(`✓ ${filePath} (${parsed.dependencies.length} deps)`);
-      }
     }
     
     // Export dependency graph with tree structure
     const treeWithDeps = exportDependencyGraphWithTree(parsedFiles, tree);
     
-    // Get commit SHA for versioning
-    const commitSha = await githubService.getLatestCommit(owner, repo, branch);
-    
     return {
       success: true,
       data: {
-        tree: treeWithDeps,
-        parsedFiles,
-        metadata: {
-          owner,
-          repo,
-          branch,
-          commitSha,
-          totalFiles: allCodeFiles.length,
-          analyzedFiles: parsedFiles.length,
-          language,
-          timestamp: new Date().toISOString()
-        }
+        tree: treeWithDeps
       }
     };
   } catch (error) {
