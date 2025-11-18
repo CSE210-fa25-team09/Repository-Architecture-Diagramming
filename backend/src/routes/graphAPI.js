@@ -48,7 +48,7 @@ graphRouter.get('/api/getMermaid', async (req, res) => {
     } catch (cacheErr) {
       // Cache miss - generate new diagrams
       console.log(`Cache miss for ${owner}/${repo} (${queryBranch}@${commitSha})`);
-      console.log(`Generating new Mermaid diagrams...`);
+      console.log(`Error: ${cacheErr.message}`);
     }
 
     // Analyze dependencies (analyze all files)
