@@ -1,0 +1,65 @@
+name: Testing Workflow
+
+on: [push]
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    # Run this job INSIDE the prebuilt Docker image
+    container:
+      image: ghcr.io/elaine-ch/repo-arch-diagramming-ci:latest
+      # If your image is private, uncomment:
+      # credentials:
+      #   username: ${{ github.actor }}
+      #   password: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Frontend tests (deps are already installed in the image)
+      - name: Run Frontend Unit Tests
+        working-directory: ./frontend
+        run: npm run test
+
+      # Backend tests
+      - name: Run Backend Unit Tests
+        working-directory: ./backend
+        run: npm test
+
+      # Coverage badge for GitHub Actions
+      # (assumes your `npm run test` generates coverage/coverage-summary.json via vitest)
+      - name: Get Coverage for badge
+        working-directory: ./frontend
+        run: |
+          # Run tests with coverage (if needed).
+          # If your default npm run test ALREADY generates coverage/coverage-summary.json,
+          # you can consider splitting commands or using a separate script for coverage only.
+          npm run test
+
+          # coverage/coverage-summary.json is created because of json-summary reporter
+          COVERAGE=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+          echo "COVERAGE=${COVERAGE}%" >> $GITHUB_ENV
+
+          # Extract branch name info for badge
+          REF=${{ github.ref }}
+          echo "github.ref: $REF"
+          IFS='/' read -ra PATHS <<< "$REF"
+          BRANCH_NAME="${PATHS[1]}_${PATHS[2]}"
+          echo $BRANCH_NAME
+          echo "BRANCH=$(echo ${BRANCH_NAME})" >> $GITHUB_ENV
+
+      - name: Create the Badge
+        uses: schneegans/dynamic-badges-action@v1.0.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: 950ea96d8c81479a2fc3e12d3ca71532
+          filename: Repository-Architecture-Diagramming__${{ env.BRANCH }}.json
+          label: Frontend Test Coverage
+          message: ${{ env.COVERAGE }}
+          color: green
+          namedLogo: jest
