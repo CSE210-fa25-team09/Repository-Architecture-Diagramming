@@ -1,6 +1,6 @@
 # Pipeline Status
 
-(insert diagram here)
+![alt text](cicd.png)
 
 ## Current
 
@@ -8,7 +8,7 @@
 
 All linting is done in the pipeline, run on push via Github Actions workflow.
 
-- **ESLint:** Uses the recommend rules for JavaScript, Typescript, and React. It also enforces the use of JSDocs comments on .js files.
+- **ESLint:** Uses the recommended rules for JavaScript, Typescript, and React. It also enforces the use of JSDocs comments on .js files.
 - **Prettier:** It's used by our frontend team to enforce code style. We chose to use Prettier on top of ESLint because configuring style enforcement in ESLint is more complicated.
 
 ### Code Quality
@@ -36,11 +36,12 @@ In addition to manual documentation we also generate automatic documentation in 
 ## In Progress/Planned
 ### Testing
 - We need to extend the coverage of our unit tests. Each user story/task has associated unit tests and those should be pushed along with the code before a PR is made.
-- Our backend and frontend are currently separate, but after they are connected (current plan is to set up an API endpoint) we will need to write integration tests for it.
+- Our backend and frontend are currently separate, but after they are connected (current plan is to set up an API endpoint) we will need to write integration tests for it. Since we have both the algorithmic approach and the LLM approach to generating our diagrams, that is also integration that has to be tested.
 - E2E tests also need to wait until we have the full stack working. The plan is to automate them using Jest-Puppeteer but that may change depending on our needs.
 
 ### Build/Deployment
 - As we don't know the memory requirements of the backend yet, we're still researching deployment platforms. We will need to set up a pipeline for it in a future sprint.
+- There are several hosting platform options we've been considering. In our Warmup Project, we simply ran the backend on one of our team member's spare laptops and Cloudflare tunneled to it to connect the frontend and backend. This is still a viable option if the LLM doesn't require too many resources. Other options in consideration are AWS and Google Cloud Platform, which both provide free credits that we can use. With those services we would run the backend inside a Docker container set up with our environment templates.
 
 ### Monitoring
 - As something that would be nice to have after the web app is successfully deployed, we can set up a tool to monitor the performance and user experience.
