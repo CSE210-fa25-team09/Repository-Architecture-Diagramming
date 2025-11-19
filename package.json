@@ -4,7 +4,8 @@
   "description": "Project 3",
   "main": "index.js",
   "scripts": {
-    "test": "test"
+    "test": "test",
+    "docs": "jsdoc -r backend/src/services"
   },
   "repository": {
     "type": "git",
