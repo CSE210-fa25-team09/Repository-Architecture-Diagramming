@@ -11,8 +11,10 @@ dotenv.config();
 const maxFiles = process.env.MAX_ANALYZE_FILES ? parseInt(process.env.MAX_ANALYZE_FILES) : 1000;
 const graphRouter = express.Router();
 
-// Sanitize path component to prevent directory traversal attacks
-// Removes any path separators and special characters
+/**
+ * Sanitize path component to prevent directory traversal attacks
+ * Removes any path separators and special characters
+ */
 function sanitizePathComponent(input) {
   if (!input || typeof input !== 'string') {
     throw new Error('Invalid input');
@@ -21,8 +23,9 @@ function sanitizePathComponent(input) {
   return input.replace(/[^a-zA-Z0-9_-]/g, '_');
 }
 
-
-// Validate that a path is within the expected base directory
+/**
+ * Validate that a path is within the expected base directory
+ */
 function validatePathInBaseDir(targetPath, baseDir) {
   const resolvedTarget = path.resolve(targetPath);
   const resolvedBase = path.resolve(baseDir);
