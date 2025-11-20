@@ -11,32 +11,6 @@ dotenv.config();
 const maxFiles = process.env.MAX_ANALYZE_FILES ? parseInt(process.env.MAX_ANALYZE_FILES) : 1000;
 const graphRouter = express.Router();
 
-/**
- * Sanitize path component to prevent directory traversal attacks
- * Removes any path separators and special characters
- */
-function sanitizePathComponent(input) {
-  if (!input || typeof input !== 'string') {
-    throw new Error('Invalid input');
-  }
-  // Remove path separators and special characters that could be used for traversal
-  return input.replace(/[^a-zA-Z0-9_-]/g, '_');
-}
-
-/**
- * Validate that a path is within the expected base directory
- */
-function validatePathInBaseDir(targetPath, baseDir) {
-  const resolvedTarget = path.resolve(targetPath);
-  const resolvedBase = path.resolve(baseDir);
-  
-  if (!resolvedTarget.startsWith(resolvedBase)) {
-    throw new Error('Path traversal attempt detected');
-  }
-  
-  return resolvedTarget;
-}
-
 // Endpoint to get Mermaid diagrams
 graphRouter.get('/api/getMermaid', async (req, res) => {
   const { owner, repo, branch } = req.query;
@@ -52,26 +26,12 @@ graphRouter.get('/api/getMermaid', async (req, res) => {
     
     // Get commit SHA for cache key
     const commitSha = await githubService.getLatestCommit(owner, repo, queryBranch);
-    
-    // Sanitize all user inputs to prevent path traversal
-    const safeRepo = sanitizePathComponent(repo);
-    const safeBranch = sanitizePathComponent(queryBranch);
-    const safeCommitSha = sanitizePathComponent(commitSha);
-    
-    const folderName = `${safeRepo}_${safeBranch}_${safeCommitSha}`;
-    const baseDir = path.join(process.cwd(), 'mermaid_diagrams');
-    const cacheDir = path.join(baseDir, folderName);
-    
-    // Validate the cache directory is within the expected base directory
-    validatePathInBaseDir(cacheDir, baseDir);
+    const folderName = `${repo}_${queryBranch}_${commitSha}`;
+    const cacheDir = path.join(process.cwd(), 'mermaid_diagrams', folderName);
     
     // Check if cached diagrams exist
     const internalPath = path.join(cacheDir, 'internal_dependencies.mmd');
     const allPath = path.join(cacheDir, 'all_dependencies.mmd');
-    
-    // Validate file paths are within cache directory
-    validatePathInBaseDir(internalPath, cacheDir);
-    validatePathInBaseDir(allPath, cacheDir);
     
     try {
       const [internalDependencies, allDependencies] = await Promise.all([
