@@ -24,7 +24,8 @@ export class RepoMetadataError extends Error {
 
 /**
  * Normalize a GitHub URL into { owner, repo }.
- * Accepts https and SSH formats.
+ * @param {string} githubUrl GitHub repository URL (https or SSH).
+ * @returns {{owner: string, repo: string}} Extracted owner/repo.
  */
 export function parseGithubUrl(githubUrl) {
   if (!githubUrl || typeof githubUrl !== 'string') {
@@ -126,6 +127,10 @@ function buildFileTreeSummary(tree = [], options = {}) {
 
 /**
  * Fetch relevant repo metadata used to prime the LLM.
+ * @param {object} params GitHub target.
+ * @param {string} params.githubUrl Repository URL.
+ * @param {string} [params.branch] Optional branch override.
+ * @returns {Promise<object>} Metadata payload for downstream formatting.
  */
 export async function fetchRepoMetadata({ githubUrl, branch } = {}) {
   const { owner, repo } = parseGithubUrl(githubUrl);
@@ -145,7 +150,7 @@ export async function fetchRepoMetadata({ githubUrl, branch } = {}) {
     let readme = '';
     try {
       readme = await githubService.getFile(owner, repo, 'README.md', targetBranch);
-    } catch (error) {
+    } catch {
       readme = '(README not found)';
     }
 
@@ -180,6 +185,8 @@ export async function fetchRepoMetadata({ githubUrl, branch } = {}) {
 
 /**
  * Convert the metadata into a deterministic LLM prompt.
+ * @param {object} metadata Repository metadata payload.
+ * @returns {string} Deterministic prompt text for the LLM.
  */
 export function formatMetadataForPrompt(metadata) {
   if (!metadata) {

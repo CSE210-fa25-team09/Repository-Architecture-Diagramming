@@ -130,7 +130,7 @@ async function callHuggingFace({ systemPrompt, userPrompt }) {
   let parsed;
   try {
     parsed = JSON.parse(payload);
-  } catch (error) {
+  } catch {
     throw new LlmProviderError('Unable to parse HuggingFace response.', 502, payload);
   }
 
@@ -182,7 +182,7 @@ async function callOpenAiCompatible({ systemPrompt, userPrompt }) {
   let parsed;
   try {
     parsed = JSON.parse(payload);
-  } catch (error) {
+  } catch {
     throw new LlmProviderError('Unable to parse OpenAI-compatible response.', 502, payload);
   }
 
