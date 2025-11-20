@@ -6,7 +6,6 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
     "test": "jest --passWithNoTests"
   },
   "keywords": [],
@@ -15,7 +14,9 @@
   "type": "module",
   "dependencies": {
     "@octokit/rest": "^22.0.1",
-    "dotenv": "^17.2.3"
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0"
   },
   "devDependencies": {
     "jest": "^30.2.0"
