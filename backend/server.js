@@ -11,6 +11,7 @@ import express from 'express';
 import cors from 'cors';
 import githubRouter from './src/routes/githubAPI.js';
 import graphRouter from './src/routes/graphAPI.js';
+import llmRouter from './src/routes/llmAPI.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,6 +37,7 @@ app.get('/health', (req, res) => {
 
 app.use(githubRouter);
 app.use(graphRouter);
+app.use(llmRouter);
 
 // 404 handler
 app.use((req, res) => {
