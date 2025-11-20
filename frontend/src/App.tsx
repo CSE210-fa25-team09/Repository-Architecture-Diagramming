@@ -6,6 +6,7 @@ import { Separator } from "./components/ui/separator"
 import { getSystemTheme, type Theme } from "./lib/utils"
 import { Home } from "./pages/Home"
 import { NotFound } from "./pages/NotFound"
+import { Diagram } from "./pages/Diagram"
 
 function App() {
   const [theme, setTheme] = useState<Theme>(() => getSystemTheme())
@@ -33,6 +34,7 @@ function App() {
 
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/diagram" element={<Diagram />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
