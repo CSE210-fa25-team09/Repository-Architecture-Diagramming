@@ -5,52 +5,6 @@ import { FILE_EXTENSIONS } from './src/config/parserConfig.js';
 import fs from 'fs/promises';
 import path from 'path';
 
-function extractAllCodeFiles(tree) {
-  const codeFiles = [];
-  const allExtensions = [
-    ...FILE_EXTENSIONS.jsts,
-    ...FILE_EXTENSIONS.cpp,
-    ...FILE_EXTENSIONS.python,
-    ...FILE_EXTENSIONS.java,
-    ...FILE_EXTENSIONS.go
-  ];
-  
-  function traverse(nodes, currentPath = '') {
-    if (!Array.isArray(nodes)) return;
-    nodes.forEach(node => {
-      const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
-      const ext = node.name.substring(node.name.lastIndexOf('.'));
-      if (node.type === 'file' && allExtensions.includes(ext)) {
-        codeFiles.push(fullPath);
-      } else if (node.type === 'dir' && node.children) {
-        traverse(node.children, fullPath);
-      }
-    });
-  }
-  
-  traverse(tree);
-  return codeFiles;
-}
-
-function extractCodeFiles(tree) {
-  const codeFiles = [];
-  
-  function traverse(nodes, currentPath = '') {
-    if (!Array.isArray(nodes)) return;
-    nodes.forEach(node => {
-      const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
-      if (node.type === 'file' && FILE_EXTENSIONS.jsts.includes(node.name.substring(node.name.lastIndexOf('.')))) {
-        codeFiles.push(fullPath);
-      } else if (node.type === 'dir' && node.children) {
-        traverse(node.children, fullPath);
-      }
-    });
-  }
-  
-  traverse(tree);
-  return codeFiles;
-}
-
 async function analyzeDependenciesJS() {
   // Analyze our own project (mixed JS/TS)
   const owner = 'CSE210-fa25-team09', repo = 'Repository-Architecture-Diagramming', branch = 'main', maxFiles = null;
@@ -59,7 +13,7 @@ async function analyzeDependenciesJS() {
   
   try {
     const tree = await githubService.getRepoTree(owner, repo, '', branch);
-    const allCodeFiles = extractCodeFiles(tree);
+    const allCodeFiles = dependencyAnalyzer.extractFilesByLanguage(tree, 'jsts');
     const filesToAnalyze = maxFiles ? allCodeFiles.slice(0, maxFiles) : allCodeFiles;
     
     console.log(`Found ${allCodeFiles.length} files, analyzing ${filesToAnalyze.length}\n`);
@@ -93,25 +47,6 @@ async function analyzeDependenciesJS() {
   }
 }
 
-function extractCppFiles(tree) {
-  const codeFiles = [];
-  
-  function traverse(nodes, currentPath = '') {
-    if (!Array.isArray(nodes)) return;
-    nodes.forEach(node => {
-      const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
-      if (node.type === 'file' && FILE_EXTENSIONS.cpp.includes(node.name.substring(node.name.lastIndexOf('.')))) {
-        codeFiles.push(fullPath);
-      } else if (node.type === 'dir' && node.children) {
-        traverse(node.children, fullPath);
-      }
-    });
-  }
-  
-  traverse(tree);
-  return codeFiles;
-}
-
 async function analyzeDependenciesCpp() {
   // Small C++ projects for full analysis:
   // const owner = 'nlohmann', repo = 'json', branch = 'develop', maxFiles = null; // 481 files - too big
@@ -121,7 +56,7 @@ async function analyzeDependenciesCpp() {
   
   try {
     const tree = await githubService.getRepoTree(owner, repo, '', branch);
-    const allCodeFiles = extractCppFiles(tree);
+    const allCodeFiles = dependencyAnalyzer.extractFilesByLanguage(tree, 'cpp');
     const filesToAnalyze = maxFiles ? allCodeFiles.slice(0, maxFiles) : allCodeFiles;
     
     console.log(`Found ${allCodeFiles.length} C++ files, analyzing ${filesToAnalyze.length}\n`);
@@ -155,25 +90,6 @@ async function analyzeDependenciesCpp() {
   }
 }
 
-function extractPythonFiles(tree) {
-  const codeFiles = [];
-  
-  function traverse(nodes, currentPath = '') {
-    if (!Array.isArray(nodes)) return;
-    nodes.forEach(node => {
-      const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
-      if (node.type === 'file' && FILE_EXTENSIONS.python.includes(node.name.substring(node.name.lastIndexOf('.')))) {
-        codeFiles.push(fullPath);
-      } else if (node.type === 'dir' && node.children) {
-        traverse(node.children, fullPath);
-      }
-    });
-  }
-  
-  traverse(tree);
-  return codeFiles;
-}
-
 async function analyzeDependenciesPython() {
   // Popular Python projects for testing:
   const owner = 'pallets', repo = 'flask', branch = 'main', maxFiles = null; // ~50 Python files
@@ -182,7 +98,7 @@ async function analyzeDependenciesPython() {
   
   try {
     const tree = await githubService.getRepoTree(owner, repo, '', branch);
-    const allCodeFiles = extractPythonFiles(tree);
+    const allCodeFiles = dependencyAnalyzer.extractFilesByLanguage(tree, 'python');
     const filesToAnalyze = maxFiles ? allCodeFiles.slice(0, maxFiles) : allCodeFiles;
     
     console.log(`Found ${allCodeFiles.length} Python files, analyzing ${filesToAnalyze.length}\n`);
@@ -216,44 +132,6 @@ async function analyzeDependenciesPython() {
   }
 }
 
-function extractJavaFiles(tree) {
-  const codeFiles = [];
-  
-  function traverse(nodes, currentPath = '') {
-    if (!Array.isArray(nodes)) return;
-    nodes.forEach(node => {
-      const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
-      if (node.type === 'file' && FILE_EXTENSIONS.java.includes(node.name.substring(node.name.lastIndexOf('.')))) {
-        codeFiles.push(fullPath);
-      } else if (node.type === 'dir' && node.children) {
-        traverse(node.children, fullPath);
-      }
-    });
-  }
-  
-  traverse(tree);
-  return codeFiles;
-}
-
-function extractGoFiles(tree) {
-  const codeFiles = [];
-  
-  function traverse(nodes, currentPath = '') {
-    if (!Array.isArray(nodes)) return;
-    nodes.forEach(node => {
-      const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
-      if (node.type === 'file' && FILE_EXTENSIONS.go.includes(node.name.substring(node.name.lastIndexOf('.')))) {
-        codeFiles.push(fullPath);
-      } else if (node.type === 'dir' && node.children) {
-        traverse(node.children, fullPath);
-      }
-    });
-  }
-  
-  traverse(tree);
-  return codeFiles;
-}
-
 async function analyzeDependenciesJava() {
   // Simple Java project for testing - a basic Spring Boot REST API example
   const owner = 'spring-guides', repo = 'gs-rest-service', branch = 'main', maxFiles = 30; // Small Spring Boot tutorial
@@ -262,7 +140,7 @@ async function analyzeDependenciesJava() {
   
   try {
     const tree = await githubService.getRepoTree(owner, repo, '', branch);
-    const allCodeFiles = extractJavaFiles(tree);
+    const allCodeFiles = dependencyAnalyzer.extractFilesByLanguage(tree, 'java');
     const filesToAnalyze = maxFiles ? allCodeFiles.slice(0, maxFiles) : allCodeFiles;
     
     console.log(`Found ${allCodeFiles.length} Java files, analyzing ${filesToAnalyze.length}\n`);
@@ -304,7 +182,7 @@ async function analyzeDependenciesGo() {
   
   try {
     const tree = await githubService.getRepoTree(owner, repo, '', branch);
-    const allCodeFiles = extractGoFiles(tree);
+    const allCodeFiles = dependencyAnalyzer.extractFilesByLanguage(tree, 'go');
     const filesToAnalyze = maxFiles ? allCodeFiles.slice(0, maxFiles) : allCodeFiles;
     
     console.log(`Found ${allCodeFiles.length} Go files, analyzing ${filesToAnalyze.length}\n`);
@@ -347,7 +225,7 @@ async function analyzeDependenciesTS() {
   
   try {
     const tree = await githubService.getRepoTree(owner, repo, '', branch);
-    const allCodeFiles = extractCodeFiles(tree);
+    const allCodeFiles = dependencyAnalyzer.extractFilesByLanguage(tree, 'jsts');
     const filesToAnalyze = maxFiles ? allCodeFiles.slice(0, maxFiles) : allCodeFiles;
     
     console.log(`Found ${allCodeFiles.length} TS files, analyzing ${filesToAnalyze.length}\n`);
@@ -391,7 +269,7 @@ async function analyzeDependenciesMixed() {
   
   try {
     const tree = await githubService.getRepoTree(owner, repo, '', branch);
-    const allCodeFiles = extractAllCodeFiles(tree);
+    const allCodeFiles = dependencyAnalyzer.extractFilesByLanguage(tree, 'all');
     const filesToAnalyze = maxFiles ? allCodeFiles.slice(0, maxFiles) : allCodeFiles;
     
     console.log(`Found ${allCodeFiles.length} code files (all languages), analyzing ${filesToAnalyze.length}\n`);

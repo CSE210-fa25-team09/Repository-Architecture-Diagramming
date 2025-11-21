@@ -1,4 +1,8 @@
 import { Octokit } from "@octokit/rest";
+import dotenv from 'dotenv';
+
+// Ensure environment variables are loaded
+dotenv.config();
 
 // Rate limited to 60 req per hour without GITHUB_TOKEN, 5000 with token
 const octokit = process.env.GITHUB_TOKEN
@@ -131,15 +135,18 @@ async function getAllBranches(owner, repo) {
   return response.map(branch => branch.name);
 }
 
+async function getDefaultBranch(owner, repo) {
+  const response = await octokit.repos.get({
+    "owner": owner,
+    "repo": repo
+  });
+  updateRateLimitFromHeaders(response.headers);
+  return response.data.default_branch;
+}
+
 async function getAllCommits(owner, repo, branch="") {
   if (!branch) {
-    // Get default branch
-    const response = await octokit.repos.get({
-      "owner": owner,
-      "repo": repo
-    });
-    updateRateLimitFromHeaders(response.headers);
-    branch = response.data.default_branch;
+    branch = await getDefaultBranch(owner, repo);
   }
   const commits = await octokit.paginate(octokit.repos.listCommits, {
     "owner": owner, 
@@ -185,6 +192,7 @@ const githubService = {
   getRepoTree,
   getFile,
   getAllBranches,
+  getDefaultBranch,
   getAllCommits,
   getLatestCommit,
   getRateLimit

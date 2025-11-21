@@ -310,6 +310,101 @@ function exportDependencyGraphWithTree(parsedFiles, repoTree) {
   return addDependenciesToTree(repoTree);
 }
 
+/**
+ * Extract files from a tree structure by language
+ * @param {Array|Object} tree - The tree structure (array of nodes or single root node)
+ * @param {string} language - Language name ('jsts', 'cpp', 'python', 'java', 'go', or 'all')
+ * @returns {Array} Array of file paths matching the language
+ */
+function extractFilesByLanguage(tree, language = 'all') {
+  const codeFiles = [];
+  
+  // Determine which extensions to look for
+  let targetExtensions;
+  if (language === 'all') {
+    targetExtensions = [
+      ...FILE_EXTENSIONS.jsts,
+      ...FILE_EXTENSIONS.cpp,
+      ...FILE_EXTENSIONS.python,
+      ...FILE_EXTENSIONS.java,
+      ...FILE_EXTENSIONS.go
+    ];
+  } else if (FILE_EXTENSIONS[language]) {
+    targetExtensions = FILE_EXTENSIONS[language];
+  } else {
+    throw new Error(`Unknown language: ${language}. Use 'jsts', 'cpp', 'python', 'java', 'go', or 'all'`);
+  }
+  
+  function traverse(nodes, currentPath = '') {
+    if (!Array.isArray(nodes)) return;
+    nodes.forEach(node => {
+      const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
+      const ext = node.name.substring(node.name.lastIndexOf('.'));
+      if (node.type === 'file' && targetExtensions.includes(ext)) {
+        codeFiles.push(fullPath);
+      } else if (node.type === 'dir' && node.children) {
+        traverse(node.children, fullPath);
+      }
+    });
+  }
+  
+  // Handle both array of nodes and single root node with children
+  if (Array.isArray(tree)) {
+    traverse(tree);
+  } else if (tree && tree.children) {
+    traverse(tree.children, tree.path || '');
+  }
+  
+  return codeFiles;
+}
+
+/**
+ * Analyze dependencies for a repository
+ * @param {Object} githubService - GitHub service instance
+ * @param {string} owner - Repository owner
+ * @param {string} repo - Repository name
+ * @param {string} branch - Branch name
+ * @param {Object} options - Analysis options
+ * @returns {Object} Analysis result with tree, parsedFiles, and metadata
+ */
+async function analyzeDependencies(githubService, owner, repo, branch, options = {}) {
+  const { maxFiles = 1000, language = 'all' } = options;
+  
+  try {
+    // Get repository tree
+    const tree = await githubService.getRepoTree(owner, repo, '', branch);
+    
+    // Extract files by language
+    const allCodeFiles = extractFilesByLanguage(tree, language);
+    const filesToAnalyze = maxFiles ? allCodeFiles.slice(0, maxFiles) : allCodeFiles;
+    
+    console.log(`Found ${allCodeFiles.length} files, analyzing ${filesToAnalyze.length}`);
+    
+    // Parse all files
+    const parsedFiles = [];
+    for (const filePath of filesToAnalyze) {
+      const content = await githubService.getFile(owner, repo, filePath, branch);
+      const parsed = parseFile(content, filePath);
+      parsedFiles.push(parsed);
+    }
+    
+    // Export dependency graph with tree structure
+    const treeWithDeps = exportDependencyGraphWithTree(parsedFiles, tree);
+    
+    return {
+      success: true,
+      data: {
+        tree: treeWithDeps
+      }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
 export default {
   parseJSTSFile,
   parseCppFile,
@@ -317,5 +412,7 @@ export default {
   parseJavaFile,
   parseGoFile,
   parseFile,
-  exportDependencyGraphWithTree
+  exportDependencyGraphWithTree,
+  extractFilesByLanguage,
+  analyzeDependencies
 };
