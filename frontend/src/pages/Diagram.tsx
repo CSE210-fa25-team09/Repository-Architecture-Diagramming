@@ -33,6 +33,18 @@ const BRANCH_LIBRARY = {
     id: "main",
     label: "main",
     lastGenerated: "45 seconds ago",
+    commitNumber: "8b3c9f1",
+    commitMessage: "Refine inventory flow and logging",
+    dependencyGraph: `
+      graph TD
+        API[REST API] --> Service[Inventory Service]
+        Service --> Cache[Redis Cache]
+        Service --> DB[(Postgres)]
+        Service --> Queue[[SQS]]
+        Queue --> Worker[Reservation Worker]
+        Worker --> DB
+        Worker --> Notifier[Slack Notifier]
+      `,
     diagram: `
       flowchart TD
         Start((Start)) --> Fetch[Fetch inventory snapshot]
@@ -65,6 +77,16 @@ const BRANCH_LIBRARY = {
     id: "hotfix/dynamodb-timeouts",
     label: "hotfix/dynamodb-timeouts",
     lastGenerated: "12 minutes ago",
+    commitNumber: "c12a7df",
+    commitMessage: "Harden DynamoDB timeout guardrails",
+    dependencyGraph: `
+      graph TD
+        Client[Checkout Service] --> Gateway[API Gateway]
+        Gateway --> Lambda[Timeout Guard Lambda]
+        Lambda --> Dynamo[(DynamoDB Orders)]
+        Lambda --> Metrics[CloudWatch Metrics]
+        Metrics --> Alarms[PagerDuty Alarms]
+      `,
     diagram: `
       graph LR
     node5["App.tsx"] --> node6["Header.tsx"]
@@ -224,6 +246,8 @@ type DiagramPanelProps = {
   onSwitchBranch: (branchId: BranchId) => void
 }
 
+type DiagramView = "swe" | "dependency"
+
 function DiagramPanel({
   branch,
   canRemove,
@@ -232,7 +256,12 @@ function DiagramPanel({
 }: DiagramPanelProps) {
   const [isDiagramExporting, setIsDiagramExporting] = useState(false)
   const [showFileTree, setShowFileTree] = useState(true)
+  const [diagramView, setDiagramView] = useState<DiagramView>("swe")
   const diagramRef = useRef<HTMLDivElement>(null)
+
+  const diagramLabel = diagramView === "swe" ? "SWE Diagram" : "Dependency Graph"
+  const diagramDefinition =
+    diagramView === "swe" ? branch.diagram : branch.dependencyGraph
 
   const handleExportDiagram = async () => {
     if (!diagramRef.current) return
@@ -249,7 +278,7 @@ function DiagramPanel({
       })
       const link = document.createElement("a")
       link.href = url
-      link.download = `${branch.label}-diagram.png`
+      link.download = `${branch.label}-${diagramView}-diagram.png`
       link.click()
     } catch (error) {
       console.error("Failed to export diagram", error)
@@ -262,7 +291,25 @@ function DiagramPanel({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <p className="text-base font-semibold">SWE Diagram</p>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-2 text-base font-semibold text-[color:var(--page-foreground)]"
+              >
+                {diagramLabel}
+                <ChevronDown className="h-4 w-4 text-[color:var(--icon-muted)]" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[12rem]">
+              <DropdownMenuItem onSelect={() => setDiagramView("swe")}>
+                SWE Diagram
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setDiagramView("dependency")}>
+                Dependency Graph
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {!showFileTree && (
             <Button
               variant="ghost"
@@ -292,11 +339,11 @@ function DiagramPanel({
           <button
             type="button"
             className="w-full rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)] p-4 text-left outline-none transition hover:border-[color:var(--primary-action)] focus-visible:ring-2 focus-visible:ring-[color:var(--primary-action)]"
-            aria-label={`Open enlarged diagram for ${branch.label}`}
+            aria-label={`Open enlarged ${diagramLabel.toLowerCase()} for ${branch.label}`}
           >
             <div ref={diagramRef} className="w-full">
               <MermaidDiagram
-                definition={branch.diagram}
+                definition={diagramDefinition}
                 style={{ height: PANEL_HEIGHT_PX }}
               />
             </div>
@@ -305,7 +352,7 @@ function DiagramPanel({
         <DialogContent className="h-[90vh] max-w-[90vw] border border-[color:var(--panel-border)] bg-[color:var(--panel-bg)] text-[color:var(--page-foreground)]">
           <DialogHeader>
             <DialogTitle className="text-xl">
-              {branch.label} branch SWE diagram
+              {branch.label} branch {diagramLabel.toLowerCase()}
             </DialogTitle>
             <Button
               variant="ghost"
@@ -319,7 +366,7 @@ function DiagramPanel({
           </DialogHeader>
           <div className="rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)] p-4">
             <MermaidDiagram
-              definition={branch.diagram}
+              definition={diagramDefinition}
               style={{ height: PANEL_HEIGHT_PX + 180 }}
             />
           </div>
@@ -343,7 +390,8 @@ function DiagramPanel({
               {branch.label}
             </p>
             <p className="text-xs text-[color:var(--muted-text)]">
-              Last generated {branch.lastGenerated}
+              Last generated {branch.lastGenerated} | Commit {branch.commitNumber}:{" "}
+              {branch.commitMessage}
             </p>
           </div>
           <div className="flex items-center gap-2">
