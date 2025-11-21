@@ -1,24 +1,19 @@
 // src/pages/HistorySection.tsx
-import { useState } from "react";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp } from "lucide-react";
-import type { Repo } from "@/lib/repoData";
+import { useState } from "react"
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { ChevronDown, ChevronUp } from "lucide-react"
+import type { Repo } from "@/lib/repoData"
 
 type HistorySectionProps = {
-  history: Repo[];
-  onRepoClick?: (repo: Repo) => void;
-};
+  history: Repo[]
+  onRepoClick?: (repo: Repo) => void
+}
 
-const ROW_VISIBLE = 4;
+const ROW_VISIBLE = 4
 
 export function HistorySection({ history, onRepoClick }: HistorySectionProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(false)
 
   if (history.length === 0) {
     return (
@@ -28,12 +23,12 @@ export function HistorySection({ history, onRepoClick }: HistorySectionProps) {
           No visualization history yet. Click a repo to see it here.
         </p>
       </section>
-    );
+    )
   }
 
-  const primaryRepos = history.slice(0, ROW_VISIBLE);
-  const extraRepos = history.slice(ROW_VISIBLE);
-  const hasMore = extraRepos.length > 0;
+  const primaryRepos = history.slice(0, ROW_VISIBLE)
+  const extraRepos = history.slice(ROW_VISIBLE)
+  const hasMore = extraRepos.length > 0
 
   return (
     <section className="space-y-4">
@@ -100,5 +95,5 @@ export function HistorySection({ history, onRepoClick }: HistorySectionProps) {
         </div>
       )}
     </section>
-  );
+  )
 }

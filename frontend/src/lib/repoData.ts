@@ -1,8 +1,8 @@
 export type Repo = {
-  id: string;
-  name: string;
-  description: string;
-};
+  id: string
+  name: string
+  description: string
+}
 export const SAMPLE_REPOS: Repo[] = [
   {
     id: "repo-1",
@@ -53,5 +53,5 @@ export const SAMPLE_REPOS: Repo[] = [
     id: "repo-10",
     name: "repo-10",
     description: "Sample repository-10",
-  }
-];
+  },
+]

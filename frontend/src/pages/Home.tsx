@@ -1,62 +1,54 @@
 // src/pages/Home.tsx
-import { useEffect, useMemo, useState } from "react";
-import { SampleSection } from "@/components/shared/SampleSection";
-import { HistorySection } from "@/components/shared/HistorySection";
-import { SAMPLE_REPOS, type Repo } from "@/lib/repoData";
-import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { useEffect, useMemo, useState } from "react"
+import { SampleSection } from "@/components/shared/SampleSection"
+import { HistorySection } from "@/components/shared/HistorySection"
+import { SAMPLE_REPOS, type Repo } from "@/lib/repoData"
+import { Input } from "@/components/ui/input"
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
-const HISTORY_STORAGE_KEY = "repo-history";
+const HISTORY_STORAGE_KEY = "repo-history"
 
 export function Home() {
   const [history, setHistory] = useState<Repo[]>(() => {
-    if (typeof window === "undefined") return [];
+    if (typeof window === "undefined") return []
     try {
-      const stored = window.localStorage.getItem(HISTORY_STORAGE_KEY);
-      if (!stored) return [];
-      const parsed = JSON.parse(stored) as Repo[];
-      if (!Array.isArray(parsed)) return [];
-      return parsed;
+      const stored = window.localStorage.getItem(HISTORY_STORAGE_KEY)
+      if (!stored) return []
+      const parsed = JSON.parse(stored) as Repo[]
+      if (!Array.isArray(parsed)) return []
+      return parsed
     } catch {
-      return [];
+      return []
     }
-  });
+  })
 
-  const [searchInput, setSearchInput] = useState("");
+  const [searchInput, setSearchInput] = useState("")
 
   const handleRepoClick = (repo: Repo) => {
     setHistory((prev) => {
-      const without = prev.filter((r) => r.id !== repo.id);
-      const updated = [repo, ...without];
-      return updated.slice(0, SAMPLE_REPOS.length);
-    });
-  };
+      const without = prev.filter((r) => r.id !== repo.id)
+      const updated = [repo, ...without]
+      return updated.slice(0, SAMPLE_REPOS.length)
+    })
+  }
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(
-        HISTORY_STORAGE_KEY,
-        JSON.stringify(history)
-      );
-    } catch {
+      window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history))
+    } catch (err) {
+      console.error("Failed to write history to localStorage:", err)
     }
-  }, [history]);
+  }, [history])
 
-  const isSearching = searchInput.trim().length > 0;
+  const isSearching = searchInput.trim().length > 0
   const filteredRepos: Repo[] = useMemo(() => {
-    const q = searchInput.trim().toLowerCase();
-    if (!q) return [];
+    const q = searchInput.trim().toLowerCase()
+    if (!q) return []
     return SAMPLE_REPOS.filter(
       (repo) =>
-        repo.name.toLowerCase().includes(q) ||
-        repo.description.toLowerCase().includes(q)
-    );
-  }, [searchInput]);
+        repo.name.toLowerCase().includes(q) || repo.description.toLowerCase().includes(q),
+    )
+  }, [searchInput])
 
   return (
     <main className="flex flex-1 flex-col gap-10 pb-12 px-8 pt-6">
@@ -92,14 +84,11 @@ export function Home() {
 
         {isSearching && (
           <div className="w-full max-w-5xl">
-            <h2 className="text-sm font-semibold mb-3">
-              Search results
-            </h2>
+            <h2 className="text-sm font-semibold mb-3">Search results</h2>
 
             {filteredRepos.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No repositories match your search. Keep typing or try a
-                different term.
+                No repositories match your search. Keep typing or try a different term.
               </p>
             ) : (
               <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -126,16 +115,10 @@ export function Home() {
       </section>
       {!isSearching && (
         <>
-          <SampleSection
-            repos={SAMPLE_REPOS}
-            onRepoClick={handleRepoClick}
-          />
-          <HistorySection
-            history={history}
-            onRepoClick={handleRepoClick}
-          />
+          <SampleSection repos={SAMPLE_REPOS} onRepoClick={handleRepoClick} />
+          <HistorySection history={history} onRepoClick={handleRepoClick} />
         </>
       )}
     </main>
-  );
-} 
+  )
+}
