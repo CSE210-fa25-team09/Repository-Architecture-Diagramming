@@ -40,12 +40,11 @@ export function Diagram() {
   const [panels, setPanels] = useState<string[]>(["main"])
 
   const handleAddPanel = (branchId: string) => {
-    setPanels((prev) => {
-      if (prev.includes(branchId)) return prev
-      return [...prev, branchId]
-    })
+    if (!branchId) return
+    setPanels((prev) => (prev.includes(branchId) ? prev : [...prev, branchId]))
     setBranchDetails((prev) => {
-      if (prev[branchId]) return prev
+      if (Object.prototype.hasOwnProperty.call(prev, branchId)) return prev
+      if (!Object.prototype.hasOwnProperty.call(BRANCH_LIBRARY, branchId)) return prev
       const branchData = BRANCH_LIBRARY[branchId]
       if (!branchData) return prev
       return { ...prev, [branchId]: branchData }
@@ -107,12 +106,17 @@ export function Diagram() {
               className="min-w-[16rem] max-w-[calc(100vw-2rem)] sm:max-w-none"
             >
               {unusedBranches.map((branchId) => {
-                const branch = branchDetails[branchId]
+                const branch: BranchDiagram | undefined =
+                  Object.prototype.hasOwnProperty.call(branchDetails, branchId)
+                    ? branchDetails[branchId]
+                    : undefined
                 return (
                   <DropdownMenuItem
                     data-branch-id={branchId}
                     key={branchId}
-                    onSelect={() => handleAddPanel(branchId)}
+                    onSelect={() => {
+                      handleAddPanel(branchId)
+                    }}
                     className="flex w-full flex-col items-start gap-0.5"
                   >
                     <span className="font-medium text-[color:var(--page-foreground)]">
@@ -122,7 +126,7 @@ export function Diagram() {
                       data-testid="dropdown-item-last-generated"
                       className="text-xs text-[color:var(--muted-text)]"
                     >
-                      {branch?.lastGenerated
+                      {branch
                         ? `Last generated ${branch.lastGenerated}`
                         : "Not generated yet"}
                     </span>
