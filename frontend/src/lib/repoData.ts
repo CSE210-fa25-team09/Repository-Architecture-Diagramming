@@ -1,14 +1,8 @@
-// src/lib/repoData.ts
-
 export type Repo = {
   id: string;
   name: string;
   description: string;
 };
-
-// This is the ONLY source of truth for sample repos.
-// Modify this list anytime — everything else (SampleSection, History, clicking logic)
-// will update automatically.
 export const SAMPLE_REPOS: Repo[] = [
   {
     id: "repo-1",
@@ -35,4 +29,29 @@ export const SAMPLE_REPOS: Repo[] = [
     name: "repo-5",
     description: "Sample repository-5",
   },
+  {
+    id: "repo-6",
+    name: "repo-6",
+    description: "Sample repository-6",
+  },
+  {
+    id: "repo-7",
+    name: "repo-7",
+    description: "Sample repository-7",
+  },
+  {
+    id: "repo-8",
+    name: "repo-8",
+    description: "Sample repository-8",
+  },
+  {
+    id: "repo-9",
+    name: "repo-9",
+    description: "Sample repository-9",
+  },
+  {
+    id: "repo-10",
+    name: "repo-10",
+    description: "Sample repository-10",
+  }
 ];

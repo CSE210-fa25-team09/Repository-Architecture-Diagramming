@@ -1,7 +1,7 @@
 // src/pages/Home.tsx
 import { useEffect, useMemo, useState } from "react";
-import { SampleSection } from "@/pages/SampleSection";
-import { HistorySection } from "@/pages/HistorySection";
+import { SampleSection } from "@/components/shared/SampleSection";
+import { HistorySection } from "@/components/shared/HistorySection";
 import { SAMPLE_REPOS, type Repo } from "@/lib/repoData";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,7 +14,6 @@ import {
 const HISTORY_STORAGE_KEY = "repo-history";
 
 export function Home() {
-  // --- History with localStorage ---
   const [history, setHistory] = useState<Repo[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -45,13 +44,10 @@ export function Home() {
         JSON.stringify(history)
       );
     } catch {
-      // ignore write errors
     }
   }, [history]);
 
   const isSearching = searchInput.trim().length > 0;
-
-  // 🔍 Search ONLY through SAMPLE_REPOS
   const filteredRepos: Repo[] = useMemo(() => {
     const q = searchInput.trim().toLowerCase();
     if (!q) return [];
@@ -64,22 +60,33 @@ export function Home() {
 
   return (
     <main className="flex flex-1 flex-col gap-10 pb-12 px-8 pt-6">
-      
-      {/* LEFT-ALIGNED search section */}
       <section className="w-full flex flex-col gap-4">
-        <div className="w-full max-w-xl space-y-2">
+        <div className="w-full max-w-5xl space-y-2">
           <label
             htmlFor="repo-search"
-            className="text-sm font-medium text-foreground"
+            className="text-sm font-medium text-foreground mb-3"
           >
             Search repos
           </label>
 
           <Input
             id="repo-search"
-            placeholder="Start typing to filter sample repos…"
+            placeholder="Search repos"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
+            className="
+              h-12 
+              rounded-full 
+              border border-[color:var(--input-border)] 
+              bg-[var(--panel-bg)] 
+              pl-12 
+              text-base 
+              text-[var(--page-foreground)] 
+              shadow-sm 
+              placeholder:text-[var(--input-placeholder)] 
+              focus-visible:ring-2 
+              focus-visible:ring-[color:var(--focus-ring)]
+            "
           />
         </div>
 
@@ -117,8 +124,6 @@ export function Home() {
           </div>
         )}
       </section>
-
-      {/* Only show Sample + History when NOT searching */}
       {!isSearching && (
         <>
           <SampleSection
@@ -133,4 +138,4 @@ export function Home() {
       )}
     </main>
   );
-}
+} 
