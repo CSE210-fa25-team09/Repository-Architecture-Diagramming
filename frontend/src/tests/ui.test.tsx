@@ -46,7 +46,9 @@ describe("Home UI", () => {
   it("renders search box and allows typing", () => {
     render(<Home />)
 
-    const input = screen.getAllByRole("textbox", { name: "Search repos" })[0] as HTMLInputElement
+    const input = screen.getAllByRole("textbox", {
+      name: "Search repos",
+    })[0] as HTMLInputElement
     expect(input).not.toBeNull()
 
     fireEvent.change(input, { target: { value: "repo-1" } })

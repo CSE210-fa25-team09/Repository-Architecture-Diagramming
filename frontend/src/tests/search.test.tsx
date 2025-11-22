@@ -25,7 +25,9 @@ describe("Search behavior", () => {
   it("shows search results with matching repos while searching", async () => {
     render(<Home />)
 
-    const input = screen.getAllByRole("textbox", { name: "Search repos" })[0] as HTMLInputElement
+    const input = screen.getAllByRole("textbox", {
+      name: "Search repos",
+    })[0] as HTMLInputElement
     const [targetRepo] = SAMPLE_REPOS
     fireEvent.change(input, { target: { value: targetRepo.name } })
 
@@ -40,7 +42,9 @@ describe("Search behavior", () => {
   it("restores Sample and History when search is cleared", async () => {
     render(<Home />)
 
-    const input = screen.getAllByRole("textbox", { name: "Search repos" })[0] as HTMLInputElement
+    const input = screen.getAllByRole("textbox", {
+      name: "Search repos",
+    })[0] as HTMLInputElement
     fireEvent.change(input, { target: { value: "repo-1" } })
     fireEvent.change(input, { target: { value: "" } })
 
