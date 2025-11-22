@@ -28,9 +28,7 @@ function App() {
             isDark={isDark}
             onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
           />
-
           <Separator className="bg-[color:var(--panel-border)]" />
-
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="*" element={<NotFound />} />
