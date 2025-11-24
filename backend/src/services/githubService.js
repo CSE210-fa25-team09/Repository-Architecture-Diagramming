@@ -53,23 +53,18 @@ async function getContent(owner, repo, path, ref = "") {
 }
 
 async function getRepoTree(owner, repo, path = "", ref = "") {
-  // Get the SHA of the branch/ref
+  // Get the default branch if ref not specified
   if (!ref) {
     const response = await octokit.repos.get({ owner, repo });
     updateRateLimitFromHeaders(response.headers);
     ref = response.data.default_branch;
   }
   
-  // Get the commit SHA
-  const commitResponse = await octokit.repos.getCommit({ owner, repo, ref });
-  updateRateLimitFromHeaders(commitResponse.headers);
-  const treeSha = commitResponse.data.commit.tree.sha;
-  
-  // Get entire tree recursively in ONE API call
+  // Get entire tree recursively using branch reference (GitHub resolves it to commit SHA)
   const treeResponse = await octokit.git.getTree({
     owner,
     repo,
-    tree_sha: treeSha,
+    tree_sha: `${ref}`,  // GitHub API accepts branch names directly
     recursive: 'true'  // This gets the entire tree at once!
   });
   updateRateLimitFromHeaders(treeResponse.headers);
@@ -184,7 +179,41 @@ async function getLatestCommit(owner, repo, branch = "") {
   });
   updateRateLimitFromHeaders(response.headers);
   
-  return response.data[0]?.sha?.substring(0, 7) || 'unknown'; // Return short SHA (7 chars)
+  const commit = response.data[0];
+  if (!commit) {
+    return { 
+      sha: 'unknown', 
+      fullSha: 'unknown',
+      message: 'No commits found',
+      author: 'unknown',
+      date: new Date().toISOString()
+    };
+  }
+  
+  return {
+    sha: commit.sha.substring(0, 7),
+    fullSha: commit.sha,
+    message: commit.commit.message,
+    author: commit.commit.author.name,
+    date: commit.commit.author.date
+  };
+}
+
+async function getRepoInfo(owner, repo) {
+  const response = await octokit.repos.get({
+    "owner": owner,
+    "repo": repo
+  });
+  updateRateLimitFromHeaders(response.headers);
+  
+  return {
+    description: response.data.description || '',
+    stars: response.data.stargazers_count,
+    language: response.data.language,
+    defaultBranch: response.data.default_branch,
+    createdAt: response.data.created_at,
+    updatedAt: response.data.updated_at
+  };
 }
 
 const githubService = {
@@ -195,6 +224,7 @@ const githubService = {
   getDefaultBranch,
   getAllCommits,
   getLatestCommit,
+  getRepoInfo,
   getRateLimit
 };
 
