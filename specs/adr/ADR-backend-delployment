@@ -1,0 +1,114 @@
+# Architecture Decision Record (ADR)
+
+ADR #: 005  
+Title: Deployment Platform: Render  
+Date: 2025-11-24  
+Status: Proposed
+
+## 1. Context
+
+We need to host our Node.js/Express backend to serve APIs for our frontend (GitHub Pages) and external consumers.  
+Key requirements:
+- Simple, reliable public HTTPS endpoint for API calls.
+- Auto-deployment triggered by changes to our GitHub repository.
+- Easy management of environment variables (API tokens, secrets).
+- Zero cost for MVP.
+- Immediate error diagnosis, log access, and ability to roll back/redeploy quickly.
+
+Current alternatives (GCP, Railway, self-hosted servers, AWS) require more manual setup, cloud expertise, and/or paid tiers for persistent reliability.
+
+---
+
+## Constraints / Requirements
+
+- Must provide a free (or very low cost) tier for development and early production.
+- Must support automatic builds and deployments from GitHub repo main branch with CI checks.
+- Should support adding/changing environment variables via dashboard.
+- Must make public API endpoints available over HTTPS.
+- Should be easy to diagnose errors, view logs, and monitor deploys — no cloud or infrastructure skills required.
+- Persistent disk is not needed for MVP; file storage via GitHub covers curated samples.
+
+---
+
+## Current state
+
+Backend is structured as a Node.js/Express repo in `backend/`. No deployment provider was finalized.  
+Requirements were defined by need for student/MVP velocity, cost savings, and frictionless auto-deployments.  
+Render, Railway, and GCP were considered. Existing hosting (GitHub Pages) supports only frontend/static assets.
+
+---
+
+## 2. Decision
+
+We choose **Render** for backend deployment.
+
+- Render’s free tier supports Node.js web services, auto-builds from GitHub, instant HTTPS, and auto-sleep for inactive services.
+- Push to `main` triggers auto-deploy, keeping releases in sync and enabling rapid experimentation.
+- Dashboard provides flexible environment config for tokens, secrets, and keys, all updatable after deployment.
+- Live logs and deploy rollback streamline debugging and fixes for team members.
+- Suitable for MVP; comparable alternatives require higher effort or payment for same features.
+
+**Why it solves our needs:**
+- Fits our velocity and accessibility goals—any contributor can deploy, update env vars, and monitor in one place.
+- Enables seamless integration with static frontend (GitHub Pages), since backend is public and CORS can be configured as needed.
+- Reduces cognitive load compared to advanced cloud VMs or managed containers.
+
+---
+
+## 3. Alternatives Considered
+
+### Google Cloud Platform (Cloud Run, App Engine, Compute Engine)
+Pros: Supports advanced infrastructure, scaling, persistent disk, custom domains.
+Cons: Heavier configuration for Node.js setup, network/firewall settings, environment, and CI/CD; free tier not easily persistent; higher learning curve for new contributors.
+
+### Railway.app
+Pros: Similar to Render, fast GitHub deployment, easy environment variable UI.
+Cons: Free tier limited to lower memory and monthly compute hours; sleeps after inactivity; UI less intuitive than Render.
+
+### Self-hosted VMs (AWS EC2, Azure, DigitalOcean, Linode)
+Pros: Full OS and disk control, supports all backend and model serving needs.
+Cons: Too complex for MVP; manual deploys, OS patching, SSL setup all required; not cost-effective for low/burst traffic.
+
+### Netlify / Firebase / GitHub Pages
+Pros: Perfect for frontend/static hosting; HTTPS and custom domain management.
+Cons: Does not support Node.js/Express backend APIs.
+
+---
+
+## 4. Consequences
+
+### Positive Outcomes
+- Fast iteration and low-friction deployments.
+- Free public API hosting for MVP and demos; can upgrade easily if needed.
+- Dashboards make secrets management and troubleshooting accessible for all contributors.
+- Great for projects with fluctuating or infrequent traffic.
+
+### Negative Outcomes / Risks
+- Service sleeps after 15 minutes of inactivity, may delay initial API response.
+- Free plan limited in RAM/CPU; must upgrade for production scale.
+- Lock-in risk: Migration to other providers requires new CI scripts or deploy config.
+
+### Mitigations
+- Document sleep/wake for frontend teams.
+- Add alerts for backend errors/log monitoring.
+- Plan migration path for larger traffic; update ADR if needed.
+
+---
+
+## 5. Implementation Notes
+
+- Authorize Render to access GitHub repository for auto-deploy.
+- Set service root to `/backend` and use `npm install`/`npm start` for build/run.
+- Add env vars (`GITHUB_API_TOKEN`, etc.) in dashboard as needed.
+- Confirm endpoint works and update frontend API URLs.
+- Keep deployment docs with troubleshooting and rollback instructions.
+
+---
+
+## 6. References
+
+- Render Docs: https://render.com/docs/deploy-nodejs-app
+- Railway: https://railway.app/
+- GCP Deploy: https://cloud.google.com/run/docs/deploying
+- ADR guidance: [AWS ADR best practices](https://aws.amazon.com/blogs/architecture/master-architecture-decision-records-adrs-best-practices-for-effective-decision-making/)
+  [Red Hat ADR overview](https://www.redhat.com/en/blog/architecture-decision-records)
