@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
+import { MemoryRouter } from "react-router-dom"
 import { Home } from "@/pages/Home"
 import { SAMPLE_REPOS } from "@/lib/repoData"
 
@@ -11,9 +12,16 @@ beforeEach(() => {
   window.localStorage.removeItem(HISTORY_KEY)
 })
 
+const renderHome = () =>
+  render(
+    <MemoryRouter>
+      <Home />
+    </MemoryRouter>,
+  )
+
 describe("Home UI", () => {
   it("renders only the first row sample repos initially", () => {
-    render(<Home />)
+    renderHome()
     const visibleRepos = SAMPLE_REPOS.slice(0, ROW_VISIBLE)
     const hiddenRepos = SAMPLE_REPOS.slice(ROW_VISIBLE)
 
@@ -30,7 +38,7 @@ describe("Home UI", () => {
   })
 
   it("clicking a sample repo increases its occurrences in history", () => {
-    render(<Home />)
+    renderHome()
 
     const target = SAMPLE_REPOS[0]
 
@@ -44,7 +52,7 @@ describe("Home UI", () => {
   })
 
   it("renders search box and allows typing", () => {
-    render(<Home />)
+    renderHome()
 
     const input = screen.getAllByRole("textbox", {
       name: "Search repos",
