@@ -51,7 +51,7 @@ export default function RepositoryInputCard() {
   return (
     <Card className="relative w-full max-w-none bg-[var(--panel-bg)] ">
       <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-1">
+        <form onSubmit={handleSubmit} data-testid="repo-input-form" className="flex flex-col gap-1">
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
             <Label
               htmlFor="repo-url"
@@ -93,7 +93,7 @@ export default function RepositoryInputCard() {
           />
           {/* Upload Icon*/}
           <Upload className="h-4 w-4 text-[color:var(--icon-muted)]" />
-          <Label>Or upload a .zip file of the repository</Label>
+          <Label htmlFor="zip-upload">Or upload a .zip file of the repository</Label>
           {/* Button for user to select zip file that user wants to upload to generate a diagram */}
           <Input
             type="file"
