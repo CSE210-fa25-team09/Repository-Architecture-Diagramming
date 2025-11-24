@@ -38,7 +38,7 @@ async function checkCache(baseCacheDir, repo, branch, commitSha) {
       };
     }
   } catch (err) {
-    // Cache miss or read error
+    console.error(`   Cache check failed: ${err.message}`);
   }
   
   return null;
