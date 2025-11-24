@@ -51,7 +51,11 @@ export default function RepositoryInputCard() {
   return (
     <Card className="relative w-full max-w-none bg-[var(--panel-bg)] ">
       <CardContent>
-        <form onSubmit={handleSubmit} data-testid="repo-input-form" className="flex flex-col gap-1">
+        <form
+          onSubmit={handleSubmit}
+          data-testid="repo-input-form"
+          className="flex flex-col gap-1"
+        >
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
             <Label
               htmlFor="repo-url"

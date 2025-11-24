@@ -1,6 +1,13 @@
-import { describe,it,expect, vi, afterEach, } from "vitest";
-import { render, screen, fireEvent, waitFor, within, cleanup } from "@testing-library/react";
-import { Home } from "@/pages/Home";
+import { describe, it, expect, vi, afterEach } from "vitest"
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+  cleanup,
+} from "@testing-library/react"
+import { Home } from "@/pages/Home"
 
 const mockNavigate = vi.fn()
 vi.mock("react-router-dom", async (importOriginal) => {
@@ -17,28 +24,29 @@ const createMockFile = (name: string, size: number, mimeType: string) => {
   return file
 }
 function getFormElements() {
-    // Finds the form element using the data-testid and selects the first instance [0]
-    const formElement = screen.getAllByTestId('repo-input-form')[0]; 
-    // Finds the submit button scoped within that form instance
-    const submitButton = within(formElement).getByRole("button", { name: /Generate Diagram/i });
-    return { formElement, submitButton };
+  // Finds the form element using the data-testid and selects the first instance [0]
+  const formElement = screen.getAllByTestId("repo-input-form")[0]
+  // Finds the submit button scoped within that form instance
+  const submitButton = within(formElement).getByRole("button", {
+    name: /Generate Diagram/i,
+  })
+  return { formElement, submitButton }
 }
 describe("Home Component (Integration Test)", () => {
-    
   // Reset the mock functions after each test to ensure a clean slate
   afterEach(() => {
-    vi.clearAllMocks() 
+    vi.clearAllMocks()
     cleanup()
   })
 
   // --- Test 1: Successful URL Submission ---
   it("allows for successful submission of a valid GitHub URL", () => {
     render(<Home />)
-    
+
     // Use native Chai assertion (.toBeTruthy()) instead of .toBeInTheDocument()
     const urlInput = screen.getByLabelText(/Enter GitHub Repo URL/i)
-    expect(urlInput).toBeTruthy() 
-    
+    expect(urlInput).toBeTruthy()
+
     // Use getAllByRole to handle the potential duplicate issue, selecting the primary submit button
     const submitButton = screen.getAllByRole("button", { name: /Generate Diagram/i })[0]
     expect(submitButton).toBeTruthy()
@@ -52,15 +60,15 @@ describe("Home Component (Integration Test)", () => {
     // Assert: Check navigation
     const expectedRoute = `/diagram?repo=${encodeURIComponent(validUrl)}`
     expect(mockNavigate).toHaveBeenCalledWith(expectedRoute)
-    
+
     // Assert: Check for absence of error message
-    expect(screen.queryByText(/Please enter a valid GitHub repo URL/i)).toBeNull() 
+    expect(screen.queryByText(/Please enter a valid GitHub repo URL/i)).toBeNull()
   })
 
   // --- Test 2: Invalid Input Failure ---
   it("displays an error message when the form is submitted without valid input", () => {
     render(<Home />)
-    
+
     // Select the primary submit button
     const submitButton = screen.getAllByRole("button", { name: /Generate Diagram/i })[0]
 
@@ -68,33 +76,35 @@ describe("Home Component (Integration Test)", () => {
     fireEvent.click(submitButton)
 
     // Assert: Check for the error message's presence
-    const errorMessage = screen.getByText(/Please enter a valid GitHub repo URL or upload a .zip file./i)
+    const errorMessage = screen.getByText(
+      /Please enter a valid GitHub repo URL or upload a .zip file./i,
+    )
     expect(errorMessage).toBeTruthy()
     expect(mockNavigate).not.toHaveBeenCalled()
   })
-  
+
   // --- Test 3: Successful Zip File Submission ---
   it("allows for navigation via zip file upload", async () => {
     render(<Home />)
-    
-   const mockZipFile = createMockFile("full-test.zip", 2048, "application/zip")
+
+    const mockZipFile = createMockFile("full-test.zip", 2048, "application/zip")
 
     // Get the submit button from the single, correct form instance
-    const { submitButton } = getFormElements(); 
+    const { submitButton } = getFormElements()
 
     // 1. Get the hidden file input element by its ID (must be outside the form scope)
-    const zipInput = document.getElementById('zip-upload') as HTMLInputElement | null;
-    
+    const zipInput = document.getElementById("zip-upload") as HTMLInputElement | null
+
     if (!zipInput) throw new Error("Zip input not found for testing")
 
-    // Simulate User Interaction: 
+    // Simulate User Interaction:
     // Directly simulate the 'change' event on the hidden input to set the component's state.
     fireEvent.change(zipInput, { target: { files: [mockZipFile] } })
 
     // Wait for the state to update after the file change event
     await waitFor(() => {
-        expect(zipInput.files?.length).toBe(1);
-    });
+      expect(zipInput.files?.length).toBe(1)
+    })
 
     // 2. Submit the form by clicking the submit button.
     fireEvent.click(submitButton)
@@ -102,7 +112,7 @@ describe("Home Component (Integration Test)", () => {
     // Assert: Check navigation
     const expectedRoute = `/diagram?zip=${encodeURIComponent(mockZipFile.name)}`
     await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith(expectedRoute)
+      expect(mockNavigate).toHaveBeenCalledWith(expectedRoute)
     })
   })
-});
+})
