@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
+import { MemoryRouter } from "react-router-dom"
 import { Home } from "@/pages/Home"
 import { SAMPLE_REPOS } from "@/lib/repoData"
 
@@ -10,9 +11,16 @@ beforeEach(() => {
   window.localStorage.removeItem(HISTORY_KEY)
 })
 
+const renderHome = () =>
+  render(
+    <MemoryRouter>
+      <Home />
+    </MemoryRouter>,
+  )
+
 describe("History behavior", () => {
   it("shows placeholder when there is no history", () => {
-    render(<Home />)
+    renderHome()
 
     const placeholder = screen.getByText(
       "No visualization history yet. Click a repo to see it here.",
@@ -24,7 +32,7 @@ describe("History behavior", () => {
     const seedHistory = SAMPLE_REPOS.slice(0, 2)
     window.localStorage.setItem(HISTORY_KEY, JSON.stringify(seedHistory))
 
-    render(<Home />)
+    renderHome()
 
     const storedRaw = window.localStorage.getItem(HISTORY_KEY) || "[]"
     const stored = JSON.parse(storedRaw)
@@ -37,7 +45,7 @@ describe("History behavior", () => {
   it("handles invalid JSON in localStorage by falling back to placeholder", () => {
     window.localStorage.setItem(HISTORY_KEY, "not-json")
 
-    render(<Home />)
+    renderHome()
 
     const placeholders = screen.queryAllByText(
       "No visualization history yet. Click a repo to see it here.",
@@ -46,7 +54,7 @@ describe("History behavior", () => {
   })
 
   it("clicking sample repos writes history to localStorage with most recent first", () => {
-    render(<Home />)
+    renderHome()
 
     const [first, second] = SAMPLE_REPOS.slice(0, 2)
 
@@ -65,7 +73,7 @@ describe("History behavior", () => {
   })
 
   it("clicking the same repo again moves it to the front without duplicates", () => {
-    render(<Home />)
+    renderHome()
 
     const first = SAMPLE_REPOS[0]
     const second = SAMPLE_REPOS[1]
@@ -88,7 +96,7 @@ describe("History behavior", () => {
   })
 
   it("history persists across re-renders via localStorage", () => {
-    const { unmount } = render(<Home />)
+    const { unmount } = renderHome()
 
     const target = SAMPLE_REPOS[0]
     const titleNodes = screen.getAllByText(target.name)
@@ -101,14 +109,14 @@ describe("History behavior", () => {
     expect(stored.length).toBeGreaterThan(0)
     expect(stored[0].name).toBe(target.name)
 
-    render(<Home />)
+    renderHome()
 
     const matches = screen.queryAllByText(target.name)
     expect(matches.length).toBeGreaterThan(0)
   })
 
   it("keeps history unique and moves most recently clicked repo to the front", () => {
-    render(<Home />)
+    renderHome()
 
     const [first, second, third] = SAMPLE_REPOS.slice(0, 3)
 

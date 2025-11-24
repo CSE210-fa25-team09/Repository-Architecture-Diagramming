@@ -4,6 +4,7 @@ import { HistorySection } from "@/components/shared/HistorySection"
 import { SAMPLE_REPOS, type Repo } from "@/lib/repoData"
 import { Input } from "@/components/ui/input"
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import RepositoryInputCard from "@/components/shared/RepositoryInputCard"
 
 const HISTORY_STORAGE_KEY = "repo-history"
 
@@ -50,7 +51,8 @@ export function Home() {
   }, [searchInput])
 
   return (
-    <main className="flex flex-1 flex-col gap-10 pb-12 px-8 pt-6">
+    <main className="flex flex-1 flex-col gap-10 pb-12">
+      <RepositoryInputCard />
       <section className="w-full flex flex-col gap-4">
         <div className="w-full max-w-5xl space-y-2">
           <h2 id="search-heading" className="text-sm font-semibold mb-3">

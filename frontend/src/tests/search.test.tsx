@@ -1,5 +1,6 @@
 import { describe, it, beforeEach, expect } from "vitest"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
+import { MemoryRouter } from "react-router-dom"
 import { Home } from "@/pages/Home"
 import { SAMPLE_REPOS } from "@/lib/repoData"
 
@@ -10,9 +11,16 @@ beforeEach(() => {
   window.localStorage.removeItem(HISTORY_KEY)
 })
 
+const renderHome = () =>
+  render(
+    <MemoryRouter>
+      <Home />
+    </MemoryRouter>,
+  )
+
 describe("Search behavior", () => {
   it("shows Sample and History when not searching", () => {
-    render(<Home />)
+    renderHome()
     const sampleHeadings = screen.queryAllByText("Sample")
     const historyHeadings = screen.queryAllByText("History")
     const searchResultsHeadings = screen.queryAllByText("Search results")
@@ -23,9 +31,11 @@ describe("Search behavior", () => {
   })
 
   it("shows search results with matching repos while searching", async () => {
-    render(<Home />)
+    renderHome()
 
-    const input = screen.getAllByRole("textbox", { name: "Search repos" })[0] as HTMLInputElement
+    const input = screen.getAllByRole("textbox", {
+      name: "Search repos",
+    })[0] as HTMLInputElement
     const [targetRepo] = SAMPLE_REPOS
     fireEvent.change(input, { target: { value: targetRepo.name } })
 
@@ -38,9 +48,11 @@ describe("Search behavior", () => {
   })
 
   it("restores Sample and History when search is cleared", async () => {
-    render(<Home />)
+    renderHome()
 
-    const input = screen.getAllByRole("textbox", { name: "Search repos" })[0] as HTMLInputElement
+    const input = screen.getAllByRole("textbox", {
+      name: "Search repos",
+    })[0] as HTMLInputElement
     fireEvent.change(input, { target: { value: "repo-1" } })
     fireEvent.change(input, { target: { value: "" } })
 
