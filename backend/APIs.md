@@ -60,7 +60,7 @@ Returns GitHub API rate limit information and authentication status.
 
 ### GET `/api/branches`
 
-Get all branches for a repository.
+Get all branches for a repository along with repository description.
 
 **Query Parameters:**
 - `owner` (required) - Repository owner/organization name
@@ -73,16 +73,12 @@ GET /api/branches?owner=CSE210-fa25-team09&repo=Repository-Architecture-Diagramm
 
 **Response:**
 
-Returns list of all branches in the repository.
+Returns list of all branches and repository description. This endpoint provides repository information needed before rendering any graphs.
 
 **Schema:**
 - `success` (boolean) - Request status
-- `branches` (array) - List of branch objects
-  - `name` (string) - Branch name
-  - `commit` (object) - Latest commit information
-    - `sha` (string) - Commit SHA hash
-    - `url` (string) - GitHub API URL for commit
-  - `protected` (boolean) - Whether branch is protected
+- `branches` (array) - List of branch names (strings)
+- `repoDescription` (string) - Repository description/about text
 
 **Status Codes:**
 - `200` - Success
@@ -126,9 +122,9 @@ Returns hierarchical file tree structure of the repository.
 
 ## Graph API Endpoints
 
-### GET `/api/getMermaid`
+### GET `/api/analyzeRepo`
 
-Analyze repository dependencies and generate Mermaid diagrams. Results are cached based on repository, branch, and commit SHA.
+Analyze repository and return dependency diagrams with repository metadata. Results are cached based on repository, branch, and commit SHA.
 
 **Query Parameters:**
 - `owner` (required) - Repository owner/organization name
@@ -137,24 +133,29 @@ Analyze repository dependencies and generate Mermaid diagrams. Results are cache
 
 **Example:**
 ```
-GET /api/getMermaid?owner=CSE210-fa25-team09&repo=Repository-Architecture-Diagramming&branch=main
+GET /api/analyzeRepo?owner=CSE210-fa25-team09&repo=Repository-Architecture-Diagramming&branch=main
 ```
 
 **Response:**
 
-Returns two Mermaid diagram strings representing repository dependencies.
+Returns dependency diagrams, repository information, and latest commit details.
 
 **Schema:**
 - `allDependencies` (string) - Mermaid diagram including all dependencies (internal, external, built-in)
 - `internalDependencies` (string) - Mermaid diagram showing only internal project file dependencies
+- `timestamp` (number) - Unix timestamp (seconds) of when the diagrams were generated
+- `repoDescription` (string) - Repository description/about text
+- `commitId` (string) - Short commit SHA (7 characters) of latest commit
+- `commitMessage` (string) - Commit message of latest commit
 
 **Caching:**
-- Diagrams are cached in `mermaid_diagrams/{repo}_{branch}_{commitSha}/`
-- Cache includes `.mmd` files and `.png` images (if generated)
-- Subsequent requests with same commit SHA return cached results instantly
+- Diagrams are cached in `mermaid_diagrams/{repo}_{branch}_{commitSha}_{timestamp}/`
+- Current cache just includes `.mmd` files
+- Subsequent requests with same commit SHA return cached results with updated metadata
+- Outdated caches (different commit SHA) are automatically cleaned up after new generation
 
 **Status Codes:**
-- `200` - Success (diagrams returned)
+- `200` - Success (diagrams and metadata returned)
 - `400` - Missing required parameters
 - `500` - Server error, GitHub API error, or analysis failure
 
@@ -165,5 +166,5 @@ Returns two Mermaid diagram strings representing repository dependencies.
 
 - All GitHub API calls respect rate limits (60/hour unauthenticated, 5000/hour with token)
 - Set `GITHUB_TOKEN` environment variable for higher rate limits
-- The `/api/getMermaid` endpoint performs expensive operations and may take several seconds on first request
+- The `/api/analyzeRepo` endpoint performs expensive operations and may take several seconds on first request
 - Cached diagram files are stored in the `mermaid_diagrams/` directory (not Git-tracked due to `.gitignore` settings)
