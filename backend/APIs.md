@@ -60,7 +60,7 @@ Returns GitHub API rate limit information and authentication status.
 
 ### GET `/api/branches`
 
-Get all branches for a repository.
+Get all branches for a repository along with repository description.
 
 **Query Parameters:**
 - `owner` (required) - Repository owner/organization name
@@ -73,11 +73,12 @@ GET /api/branches?owner=CSE210-fa25-team09&repo=Repository-Architecture-Diagramm
 
 **Response:**
 
-Returns list of all branches in the repository.
+Returns list of all branches and repository description. This endpoint provides repository information needed before rendering any graphs.
 
 **Schema:**
 - `success` (boolean) - Request status
 - `branches` (array) - List of branch names (strings)
+- `repoDescription` (string) - Repository description/about text
 
 **Status Codes:**
 - `200` - Success

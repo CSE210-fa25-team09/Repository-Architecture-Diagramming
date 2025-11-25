@@ -37,8 +37,15 @@ githubRouter.get('/api/branches', async (req, res) => {
   }
   
   try {
-    const branches = await githubService.getAllBranches(owner, repo);
-    res.json({ success: true, branches });
+    const [branches, repoInfo] = await Promise.all([
+      githubService.getAllBranches(owner, repo),
+      githubService.getRepoInfo(owner, repo)
+    ]);
+    res.json({ 
+      success: true, 
+      branches,
+      repoDescription: repoInfo.description 
+    });
   } catch (error) {
     console.error('Error fetching branches:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch branches' });
