@@ -29,9 +29,9 @@ export type BranchLibrary = Record<string, BranchDiagram>
 
 export function Diagram() {
   // Prepare repo details for initial view
-  const [repoName, setRepoName] = useState(REPOSITORY_NAME)
-  const [repoSummary, setRepoSummary] = useState(WORKSPACE_SUMMARY)
-  const [branches, setBranches] = useState<string[]>(BRANCH_LIST) // list of branch IDs
+  const [repoName, _setRepoName] = useState(REPOSITORY_NAME)
+  const [repoSummary, _setRepoSummary] = useState(WORKSPACE_SUMMARY)
+  const [branches, _setBranches] = useState<string[]>(BRANCH_LIST) // list of branch IDs
   const [branchDetails, setBranchDetails] = useState<BranchLibrary>({
     main: BRANCH_LIBRARY["main"],
   }) // branch ID to details map, initially only main branch
