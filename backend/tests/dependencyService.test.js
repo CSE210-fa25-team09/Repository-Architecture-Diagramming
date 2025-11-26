@@ -1,5 +1,11 @@
 import dependencyService from '../src/services/dependencyService.js';
 
+const mockGithubService = {
+  getRepoTree: jest.fn(),
+  getFile: jest.fn(),
+  getLatestCommit: jest.fn()
+};
+
 describe('Dependency Service Tests', () => {
 
   test('extractFilesByLanguage should filter files correctly', () => {
@@ -17,6 +23,9 @@ describe('Dependency Service Tests', () => {
 
     const pyFiles = dependencyService.extractFilesByLanguage(mockTree, 'python');
     expect(pyFiles).toEqual(['main.py']);
+
+    const allFiles = dependencyService.extractFilesByLanguage(mockTree, 'all');
+    expect(allFiles).toEqual(['src/index.js', 'src/utils.ts', 'main.py']);
   });
 
   test('parseFile should detect JavaScript imports', () => {
@@ -52,7 +61,58 @@ import local_module`;
     ]));
   });
 
-  // NEW TEST: Increases coverage by testing graph linkage
+
+  test('parseFile should detect Java imports', () => {
+    const content = `package com.example;
+import java.util.List;
+import org.springframework.boot.SpringApplication;
+import com.example.project.Helper;`;
+    const filePath = 'src/main/java/com/example/App.java';
+
+    const result = dependencyService.parseFile(content, filePath);
+
+    expect(result.dependencies).toEqual(expect.arrayContaining([
+        expect.objectContaining({ module: 'java.util', type: 'builtin' }),
+        expect.objectContaining({ module: 'org.springframework.boot', type: 'external' }),
+        expect.objectContaining({ module: 'com.example.project', type: 'external' })
+    ]));
+  });
+
+  test('parseFile should detect C++ imports', () => {
+    const content = `#include <iostream>
+#include <vector>
+#include "myHeader.h"
+#include "utils/helper.hpp"`;
+    const filePath = 'src/main.cpp';
+
+    const result = dependencyService.parseFile(content, filePath);
+
+    expect(result.dependencies).toEqual(expect.arrayContaining([
+        expect.objectContaining({ module: 'iostream', type: 'builtin' }),
+        expect.objectContaining({ module: 'vector', type: 'builtin' }),
+        expect.objectContaining({ module: 'myHeader.h', type: 'external' }),
+        expect.objectContaining({ module: 'utils/helper.hpp', type: 'internal' }) 
+    ]));
+  });
+
+  test('parseFile should detect Go imports', () => {
+    const content = `package main
+import (
+    "fmt"
+    "github.com/pkg/errors"
+    "./internal/utils"
+)`;
+    const filePath = 'main.go';
+
+    const result = dependencyService.parseFile(content, filePath);
+
+    expect(result.dependencies).toEqual(expect.arrayContaining([
+        expect.objectContaining({ module: 'fmt', type: 'builtin' }),
+        expect.objectContaining({ module: 'github.com/pkg/errors', type: 'external' }),
+        expect.objectContaining({ module: './internal/utils', type: 'internal' })
+    ]));
+  });
+
   test('exportDependencyGraphWithTree should resolve internal links', () => {
     const parsedFiles = [
         {
@@ -77,16 +137,28 @@ import local_module`;
 
     const result = dependencyService.exportDependencyGraphWithTree(parsedFiles, repoTree);
 
-    // Verify the structure remains a tree
     const srcDir = result.find(node => node.name === 'src');
     const mainFile = srcDir.children.find(node => node.name === 'main.js');
 
     expect(mainFile).toBeDefined();
     
-    // Verify ./utils was correctly resolved to src/utils.js
     const internalDep = mainFile.dependencies.find(d => d.type === 'internal');
     expect(internalDep).toBeDefined();
     expect(internalDep.module).toBe('src/utils.js');
   });
 
+  test('analyzeDependencies should orchestrate the full process', async () => {
+    const mockTree = [{ name: 'index.js', type: 'file', path: 'index.js' }];
+    mockGithubService.getRepoTree.mockResolvedValue(mockTree);
+    mockGithubService.getFile.mockResolvedValue("import fs from 'fs';");
+
+    const result = await dependencyService.analyzeDependencies(
+        mockGithubService, 'owner', 'repo', 'main'
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.data.tree).toBeDefined();
+    expect(mockGithubService.getRepoTree).toHaveBeenCalled();
+    expect(mockGithubService.getFile).toHaveBeenCalled();
+  });
 });

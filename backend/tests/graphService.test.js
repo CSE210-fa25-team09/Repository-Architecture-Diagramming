@@ -2,7 +2,6 @@ import graphService from '../src/services/graphService.js';
 
 describe('Graph Service Tests', () => {
 
-  // Logic requires 'name' and 'type' to traverse correctly
   const mockTree = [
     {
       name: 'src',
@@ -13,7 +12,8 @@ describe('Graph Service Tests', () => {
           type: 'file',
           dependencies: [
             { module: 'src/utils.js', type: 'internal' },
-            { module: 'react', type: 'external' }
+            { module: 'react', type: 'external' },
+            { module: 'fs', type: 'builtin' }
           ]
         },
         {
@@ -26,20 +26,38 @@ describe('Graph Service Tests', () => {
   ];
 
   test('generateStyledMermaidFlowchart should generate valid mermaid code', () => {
-    // We expect the graph to generate ids based on the paths constructed from 'name'
     const result = graphService.generateStyledMermaidFlowchart(mockTree, { styled: false });
     
     expect(result).toContain('graph LR');
-    // The service generates node IDs, but includes labels with the filenames
     expect(result).toContain('index.js');
     expect(result).toContain('utils.js');
-    // It should contain the external dependency
     expect(result).toContain('react');
   });
 
+  test('generateStyledMermaidFlowchart should support options', () => {
+    const result = graphService.generateStyledMermaidFlowchart(mockTree, { 
+        styled: true,
+        showExternal: true,
+        showBuiltin: true 
+    });
+    
+    expect(result).toContain('classDef codeStyle');
+    expect(result).toContain('classDef externalStyle');
+    expect(result).toContain('classDef builtinStyle');
+    expect(result).toContain('fs'); 
+  });
+
+  test('generateFileDependencyDiagram should generate focused graph', () => {
+    const targetFile = 'src/index.js';
+    const result = graphService.generateFileDependencyDiagram(mockTree, targetFile);
+
+    expect(result).toContain('graph LR');
+    expect(result).toContain('index.js');
+    expect(result).toContain('utils.js'); // Internal dep
+    expect(result).toContain('react'); // External dep
+  });
+
   test('getDiagramStats should return correct node/edge counts', () => {
-    // The service specifically counts nodes matching /node\d+/
-    // So we must mock the input format it actually generates
     const mockDiagram = `
       graph LR
       node1 --> node2
@@ -49,7 +67,6 @@ describe('Graph Service Tests', () => {
     
     const stats = graphService.getDiagramStats(mockDiagram);
     
-    // 4 Nodes (node1, node2, node3, node4) and 3 Edges
     expect(stats.totalNodes).toBe(4);
     expect(stats.totalEdges).toBe(3);
   });

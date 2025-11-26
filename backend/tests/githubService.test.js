@@ -1,8 +1,7 @@
 import 'dotenv/config';
 import githubService from '../src/services/githubService.js';
 
-// Increase timeout for real API calls
-jest.setTimeout(30000);
+// jest.setTimeout(30000);
 
 describe('GitHub Service Integration Tests', () => {
 
@@ -36,6 +35,7 @@ describe('GitHub Service Integration Tests', () => {
     const tree = await githubService.getRepoTree(owner, repo, "", commitSha);
     
     expect(tree).toBeDefined();
+    expect(Array.isArray(tree)).toBe(true);
   });
 
   test('getFile should fetch content of a specific file', async () => {
@@ -69,6 +69,28 @@ describe('GitHub Service Integration Tests', () => {
     expect(commits).toBeDefined();
     expect(Array.isArray(commits)).toBe(true);
     expect(commits.length).toBeGreaterThan(0);
+  });
+
+  test('getRepoInfo should return repository metadata', async () => {
+    const owner = "octocat";
+    const repo = "octocat.github.io";
+
+    const info = await githubService.getRepoInfo(owner, repo);
+
+    expect(info).toBeDefined();
+    expect(info.defaultBranch).toBeDefined();
+    expect(info.stars).toBeGreaterThanOrEqual(0);
+  });
+
+  test('getLatestCommit should return the last commit info', async () => {
+    const owner = "octocat";
+    const repo = "octocat.github.io";
+
+    const commit = await githubService.getLatestCommit(owner, repo);
+
+    expect(commit).toBeDefined();
+    expect(commit.sha).toBeDefined();
+    expect(commit.author).toBeDefined();
   });
 
 });
