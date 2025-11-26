@@ -1,7 +1,7 @@
 # Repository Architecture Diagramming
 
 ![Frontend Coverage Badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/elaine-ch/950ea96d8c81479a2fc3e12d3ca71532/raw/Repository-Architecture-Diagramming__heads_main.json)
-![Backend Coverage Badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/elaine-ch/950ea96d8c81479a2fc3e12d3ca71532/raw/Repository-Architecture-Diagramming-backend__heads_main.json)
+![Backend Coverage Badge](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/elaine-ch/950ea96d8c81479a2fc3e12d3ca71532/raw/Repository-Architecture-Diagramming-backend__heads_test.json)
 
 Project 3
 
