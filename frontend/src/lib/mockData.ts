@@ -11,6 +11,16 @@ export const BRANCH_LIBRARY: BranchLibrary = {
     lastGenerated: "45 seconds ago",
     commitNumber: "8b3c9f1",
     commitMessage: "Refine inventory flow and logging",
+    dependencyGraph: `
+      graph TD
+        API[REST API] --> Service[Inventory Service]
+        Service --> Cache[Redis Cache]
+        Service --> DB[(Postgres)]
+        Service --> Queue[[SQS]]
+        Queue --> Worker[Reservation Worker]
+        Worker --> DB
+        Worker --> Notifier[Slack Notifier]
+      `,
     diagram: `
       flowchart TD
         Start((Start)) --> Fetch[Fetch inventory snapshot]
@@ -45,6 +55,14 @@ export const BRANCH_LIBRARY: BranchLibrary = {
     lastGenerated: "12 minutes ago",
     commitNumber: "c12a7df",
     commitMessage: "Harden DynamoDB timeout guardrails",
+    dependencyGraph: `
+      graph TD
+        Client[Checkout Service] --> Gateway[API Gateway]
+        Gateway --> Lambda[Timeout Guard Lambda]
+        Lambda --> Dynamo[(DynamoDB Orders)]
+        Lambda --> Metrics[CloudWatch Metrics]
+        Metrics --> Alarms[PagerDuty Alarms]
+      `,
     diagram: `
       graph LR
     node5["App.tsx"] --> node6["Header.tsx"]

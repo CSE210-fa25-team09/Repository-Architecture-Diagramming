@@ -43,6 +43,7 @@ export type BranchDiagram = {
   fileTree: string
   commitMessage: string
   commitNumber: string
+  dependencyGraph: string
 }
 
 const BRANCH_OPTIONS = Object.values(BRANCH_LIBRARY)
@@ -63,9 +64,9 @@ export type BranchLibrary = Record<string, BranchDiagram>
 
 export function Diagram() {
   // Prepare repo details for initial view
-  const [repoName, setRepoName] = useState(REPOSITORY_NAME)
-  const [repoSummary, setRepoSummary] = useState(WORKSPACE_SUMMARY)
-  const [branches, setBranches] = useState<string[]>(BRANCH_LIST) // list of branch IDs
+  const [repoName, _setRepoName] = useState(REPOSITORY_NAME)
+  const [repoSummary, _setRepoSummary] = useState(WORKSPACE_SUMMARY)
+  const [branches, _setBranches] = useState<string[]>(BRANCH_LIST) // list of branch IDs
   const [branchDetails, setBranchDetails] = useState<BranchLibrary>({
     main: BRANCH_LIBRARY["main"],
   }) // branch ID to details map, initially only main branch
@@ -76,10 +77,10 @@ export function Diagram() {
   const handleAddPanel = (branchId: string) => {
     if (!branchId) return
     const newId = `diagram-${Date.now()}`
-    setPanels((prev) => 
+    setPanels((prev) =>
       prev.some((p) => p.branchId === branchId)
-      ? prev
-      : [...prev, { id: newId, branchId }]
+        ? prev
+        : [...prev, { id: newId, branchId }],
     )
     setBranchDetails((prev) => {
       if (Object.prototype.hasOwnProperty.call(prev, branchId)) return prev
@@ -91,22 +92,54 @@ export function Diagram() {
   }
 
   const handleRemovePanel = (diagramId: string) => {
-     setPanels((prev) => prev.filter((panel) => panel.id !== diagramId))
+    setPanels((prev) => prev.filter((panel) => panel.id !== diagramId))
   }
 
   const handleSwitchBranch = (diagramId: string, branchId: BranchId) => {
-    setPanels((prev) =>
-      prev.map((panel) => (panel.id === diagramId ? { ...panel, branchId } : panel)),
-    )
+    setPanels((prevPanels) => {
+      // 1. Find the current first panel and its current branch ID.
+      const currentPanel = prevPanels.find((p) => p.id === diagramId)
+      if (!currentPanel) return prevPanels
+      const initialBranchId = currentPanel.branchId
+
+      // 2. Check if the new first branchId is currently used by another panel
+      const otherPanelToSwap = prevPanels.find(
+        (p) => p.branchId === branchId && p.id !== diagramId,
+      )
+
+      if (otherPanelToSwap) {
+        const otherPanelId = otherPanelToSwap.id
+
+        return prevPanels.map((panel) => {
+          if (panel.id === diagramId) {
+            // Initial first branch receives the new branchId.
+            return { ...panel, branchId: branchId }
+          } else if (panel.id === otherPanelId) {
+            // New first branch receives initial first branch's original branchId.
+            return { ...panel, branchId: initialBranchId }
+          }
+          return panel
+        })
+      } else {
+        // The selected branch is either unused or is the current branch.
+        // Simply update the current panel's branch ID.
+        return prevPanels.map((panel) =>
+          panel.id === diagramId ? { ...panel, branchId } : panel,
+        )
+      }
+    })
   }
 
   const unusedBranches = useMemo(() => {
-  // CORRECT: Create a Set of BRANCH IDs currently in use
-  const usedBranchIds = new Set(panels.map((p) => p.branchId)) 
-  
-  // Filter the master list of branch IDs against the used branch IDs
-  return branches.filter((branchId) => !usedBranchIds.has(branchId))
-}, [branches, panels])
+    const usedBranchIds = new Set(panels.map((p) => p.branchId))
+    // Filter the master list of branch IDs against the used branch IDs
+    return branches.filter((branchId) => !usedBranchIds.has(branchId))
+  }, [branches, panels])
+
+  const allUsedBranchIds = useMemo(() => {
+    return new Set(panels.map((p) => p.branchId))
+  }, [panels])
+
   return (
     <main className="flex flex-1 flex-col gap-10 px-4 pb-12 sm:px-0">
       <section className="rounded-3xl border border-[color:var(--panel-border)] bg-[color:var(--panel-bg)] shadow-lg">
@@ -144,6 +177,8 @@ export function Diagram() {
                 canRemove={panels.length > 1}
                 onRemove={() => handleRemovePanel(panel.id)}
                 onSwitchBranch={(branchId) => handleSwitchBranch(panel.id, branchId)}
+                // 💡 PASS THE SET OF USED BRANCH IDs FOR FILTERING
+                usedBranchIds={allUsedBranchIds}
               />
             )
           })}
@@ -153,6 +188,7 @@ export function Diagram() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
+                id={ADD_PANEL_TRIGGER_ID}
                 variant="outline"
                 disabled={!unusedBranches.length}
                 className="flex items-center gap-2 rounded-full border-[3px] border-dashed border-[color:var(--panel-border)] px-6 py-6 text-base"
@@ -214,6 +250,7 @@ type DiagramPanelProps = {
   canRemove: boolean
   onRemove: () => void
   onSwitchBranch: (branchId: BranchId) => void
+  usedBranchIds: Set<BranchId>
 }
 
 type DiagramView = "swe" | "dependency"
@@ -228,31 +265,30 @@ function DiagramPanel({
   const [showFileTree, setShowFileTree] = useState(true)
   const [diagramView, setDiagramView] = useState<DiagramView>("swe")
   const diagramRef = useRef<HTMLDivElement>(null)
-  const [isDesktop, setIsDesktop] = useState(false) 
+  const [isDesktop, setIsDesktop] = useState(false)
 
   useEffect(() => {
-
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-        return;
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return
     }
-    
+
     // Logic that requires browser APIs runs here
     const query = "(min-width: 640px)"
     const media = window.matchMedia(query)
-    
+
     // Set initial state
     setIsDesktop(media.matches)
 
     const listener = (event: MediaQueryListEvent) => {
-        setIsDesktop(event.matches)
+      setIsDesktop(event.matches)
     }
 
     // Subscribe to changes
-    media.addEventListener('change', listener)
+    media.addEventListener("change", listener)
 
     // Cleanup function
     return () => {
-        media.removeEventListener('change', listener)
+      media.removeEventListener("change", listener)
     }
   }, [])
 
@@ -298,9 +334,12 @@ function DiagramPanel({
           Collapse
         </Button>
       </div>
-      
+
       <div className="rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--input-bg)] px-4 py-3">
-        <ScrollArea style={{ height: isDesktop ? PANEL_HEIGHT_PX : 300 }} className="w-full"> 
+        <ScrollArea
+          style={{ height: isDesktop ? PANEL_HEIGHT_PX : 300 }}
+          className="w-full"
+        >
           <pre className="whitespace-pre-wrap text-sm leading-6 text-[color:var(--page-foreground)]">
             {branch.fileTree}
           </pre>
@@ -311,9 +350,9 @@ function DiagramPanel({
 
   const DiagramComponent = (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center px-1"> 
+      <div className="flex items-center px-1">
         {/* Left Side */}
-        <div className="flex items-center gap-3"> 
+        <div className="flex items-center gap-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -345,7 +384,7 @@ function DiagramPanel({
             </Button>
           )}
         </div>
-        
+
         {/* Right Side Button */}
         <Button
           variant="ghost"
@@ -358,45 +397,45 @@ function DiagramPanel({
           <Download className="ml-2 h-4 w-4" />
         </Button>
       </div>
-      
+
       <div className="overflow-hidden">
         <Dialog>
-            <DialogTrigger asChild>
+          <DialogTrigger asChild>
             <button
-                type="button"
-                className="w-full rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)] p-4 text-left outline-none transition hover:border-[color:var(--primary-action)] focus-visible:ring-2 focus-visible:ring-[color:var(--primary-action)]"
-                aria-label={`Open enlarged ${diagramLabel.toLowerCase()} for ${branch.label}`}
+              type="button"
+              className="w-full rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)] p-4 text-left outline-none transition hover:border-[color:var(--primary-action)] focus-visible:ring-2 focus-visible:ring-[color:var(--primary-action)]"
+              aria-label={`Open enlarged ${diagramLabel.toLowerCase()} for ${branch.label}`}
             >
-                <div ref={diagramRef} className="w-full">
+              <div ref={diagramRef} className="w-full">
                 <MermaidDiagram
-                    definition={diagramDefinition}
-                    style={{ height: PANEL_HEIGHT_PX, width: '100%' }}
+                  definition={diagramDefinition}
+                  style={{ height: PANEL_HEIGHT_PX, width: "100%" }}
                 />
-                </div>
+              </div>
             </button>
-            </DialogTrigger>
-            <DialogContent className="h-[90vh] w-[95vw] max-w-6xl border border-[color:var(--panel-border)] bg-[color:var(--panel-bg)] text-[color:var(--page-foreground)]">
+          </DialogTrigger>
+          <DialogContent className="h-[90vh] w-[95vw] max-w-6xl border border-[color:var(--panel-border)] bg-[color:var(--panel-bg)] text-[color:var(--page-foreground)]">
             <DialogHeader>
-                <DialogTitle className="text-xl">
+              <DialogTitle className="text-xl">
                 {branch.label} branch {diagramLabel.toLowerCase()}
-                </DialogTitle>
-                <Button
+              </DialogTitle>
+              <Button
                 variant="ghost"
                 size="sm"
                 className="text-[color:var(--muted-text)] hover:text-[color:var(--page-foreground)]"
                 onClick={handleExportDiagram}
-                >
+              >
                 Export as Image
                 <Download className="ml-2 h-4 w-4" />
-                </Button>
+              </Button>
             </DialogHeader>
             <div className="h-full w-full overflow-auto rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)] p-4">
-                <MermaidDiagram
+              <MermaidDiagram
                 definition={diagramDefinition}
                 style={{ height: PANEL_HEIGHT_PX + 180 }}
-                />
+              />
             </div>
-            </DialogContent>
+          </DialogContent>
         </Dialog>
       </div>
       <p className="px-1 text-xs text-[color:var(--muted-text)]">
@@ -420,7 +459,7 @@ function DiagramPanel({
               Last generated {branch.lastGenerated} | Commit {branch.commitNumber}:{" "}
               {branch.commitMessage}
             </p>
-          </div>        
+          </div>
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -467,14 +506,12 @@ function DiagramPanel({
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="py-6">
         {/* --- CONDITIONAL RENDERING --- */}
         {!showFileTree ? (
           // Case 1: File Tree Collapsed (Same for both Mobile/Desktop)
-          <div style={{ height: PANEL_HEIGHT_PX }}>
-             {DiagramComponent}
-           </div>
+          <div style={{ height: PANEL_HEIGHT_PX }}>{DiagramComponent}</div>
         ) : !isDesktop ? (
           // Case 2: MOBILE (Vertical Stack, No Resizing)
           <div className="flex flex-col gap-6">
@@ -483,16 +520,13 @@ function DiagramPanel({
           </div>
         ) : (
           // Case 3: DESKTOP (Horizontal Resizable Split)
-          <ResizablePanelGroup
-            direction="horizontal"
-            className="h-[360px] gap-6" 
-          >
+          <ResizablePanelGroup direction="horizontal" className="h-[360px] gap-6">
             <ResizablePanel defaultSize={38} minSize={25}>
               {FileTreeComponent}
             </ResizablePanel>
-            
+
             <ResizableHandle withHandle className="bg-[color:var(--panel-border)]" />
-            
+
             <ResizablePanel defaultSize={62} minSize={35}>
               {DiagramComponent}
             </ResizablePanel>
