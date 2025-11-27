@@ -30,7 +30,7 @@ function parseGithubUrl(repoUrl = '') {
   let parsed;
   try {
     parsed = new URL(urlWithProtocol);
-  } catch (err) {
+  } catch {
     throw new UserInputError('Invalid GitHub URL.');
   }
 
