@@ -9,6 +9,8 @@ export const BRANCH_LIBRARY: BranchLibrary = {
     id: "main",
     label: "main",
     lastGenerated: "45 seconds ago",
+    commitNumber: "8b3c9f1",
+    commitMessage: "Refine inventory flow and logging",
     diagram: `
       flowchart TD
         Start((Start)) --> Fetch[Fetch inventory snapshot]
@@ -41,6 +43,8 @@ export const BRANCH_LIBRARY: BranchLibrary = {
     id: "hotfix/dynamodb-timeouts",
     label: "hotfix/dynamodb-timeouts",
     lastGenerated: "12 minutes ago",
+    commitNumber: "c12a7df",
+    commitMessage: "Harden DynamoDB timeout guardrails",
     diagram: `
       graph LR
     node5["App.tsx"] --> node6["Header.tsx"]
