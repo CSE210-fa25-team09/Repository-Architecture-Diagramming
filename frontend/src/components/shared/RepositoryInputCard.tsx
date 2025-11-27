@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@radix-ui/react-label"
 import { Separator } from "@radix-ui/react-separator"
-import { Upload, Loader2 } from "lucide-react"
+import { Upload, Loader2, AlertCircle } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
 import { fetchInitialWorkspace } from "@/api/diagram"
@@ -115,9 +115,12 @@ export default function RepositoryInputCard() {
           </div>
 
           {error && (
-            <Alert variant="destructive">
-              <AlertTitle>Something went wrong</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
+            <Alert variant="destructive" className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 mt-0.5" />
+              <div>
+                <AlertTitle>Something went wrong</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </div>
             </Alert>
           )}
         </form>

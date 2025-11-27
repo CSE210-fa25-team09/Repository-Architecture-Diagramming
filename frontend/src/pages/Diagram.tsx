@@ -1,165 +1,159 @@
-import { useEffect, useState } from "react"
-import { useSearchParams } from "react-router-dom"
-import { GithubIcon } from "lucide-react"
+/* eslint-disable @typescript-eslint/no-unused-vars */
+// ignore unused vars for now as we build out the page
 
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  BRANCH_LIBRARY,
+  BRANCH_LIST,
+  REPOSITORY_NAME,
+  WORKSPACE_SUMMARY,
+} from "@/lib/mockData"
+import { GithubIcon, Plus } from "lucide-react"
+import { useMemo, useState, useEffect } from "react"
 import { useWorkspace } from "@/lib/workspaceContext"
-import { fetchInitialWorkspace, fetchBranchDiagram } from "@/api/diagram"
 
+export type BranchDiagram = {
+  id: string
+  label: string
+  lastGenerated: string
+  diagram: string
+  fileTree: string
+}
+
+export type BranchLibrary = Record<string, BranchDiagram>
 
 export function Diagram() {
-  const { workspace, setWorkspace } = useWorkspace()
-  const [searchParams] = useSearchParams()
+  const { workspace } = useWorkspace()
 
-  const [workspaceError, setWorkspaceError] = useState<string | null>(null)
-  const [branchError, setBranchError] = useState<string | null>(null)
-  const [loadingBranchId, setLoadingBranchId] = useState<string | null>(null)
+  const [repoName, _setRepoName] = useState(
+    workspace?.repo?.name ?? REPOSITORY_NAME,
+  )
+  const [repoSummary, _setRepoSummary] = useState(
+    workspace?.repo?.description ?? WORKSPACE_SUMMARY,
+  )
 
-  // Reload workspace if the user refreshes /diagram or lands here directly.
   useEffect(() => {
-    if (workspace) return
-
-    const repo = searchParams.get("repo")
-    const zip = searchParams.get("zip")
-    const identifier = repo ?? zip
-    if (!identifier) return
-
-    let cancelled = false
-    setWorkspaceError(null)
-
-    ;(async () => {
-      try {
-        const ws = await fetchInitialWorkspace(identifier)
-        if (!cancelled) {
-          setWorkspace(ws)
-        }
-      } catch (err) {
-        console.error("Failed to load workspace", err)
-        if (!cancelled) {
-          setWorkspaceError("Failed to load workspace. Please go back and try again.")
-        }
-      }
-    })()
-
-    return () => {
-      cancelled = true
+    if (workspace?.repo) {
+      _setRepoName(workspace.repo.name)
+      _setRepoSummary(workspace.repo.description ?? WORKSPACE_SUMMARY)
     }
-  }, [workspace, searchParams, setWorkspace])
+  }, [workspace])
+  const [branches, _setBranches] = useState<string[]>(BRANCH_LIST)
+  const [branchDetails, setBranchDetails] = useState<BranchLibrary>({
+    main: BRANCH_LIBRARY["main"],
+  }) 
 
-  async function handleFetchBranch(branchId: string) {
+  // use branch name as panel identifier
+  const [panels, setPanels] = useState<string[]>(["main"])
+
+  const handleAddPanel = (branchId: string) => {
     if (!branchId) return
-    setBranchError(null)
-    setLoadingBranchId(branchId)
-
-    try {
-      const res = await fetchBranchDiagram(branchId)
-      console.log("Fetched branch diagram:", res)
-    } catch (err) {
-      console.error("Failed to load branch diagram", err)
-      setBranchError(`Could not load diagram for branch "${branchId}".`)
-    } finally {
-      setLoadingBranchId(null)
-    }
-  }
-  if (!workspace) {
-    return (
-      <main className="flex flex-1 flex-col gap-4 px-4 pb-12 sm:px-0">
-        <p className="mt-6 text-sm text-muted-foreground">
-          Loading workspace…
-        </p>
-        {workspaceError && (
-          <p className="text-sm text-red-500">{workspaceError}</p>
-        )}
-      </main>
-    )
+    setPanels((prev) => (prev.includes(branchId) ? prev : [...prev, branchId]))
+    setBranchDetails((prev) => {
+      if (Object.prototype.hasOwnProperty.call(prev, branchId)) return prev
+      if (!Object.prototype.hasOwnProperty.call(BRANCH_LIBRARY, branchId)) return prev
+      const branchData = BRANCH_LIBRARY[branchId]
+      if (!branchData) return prev
+      return { ...prev, [branchId]: branchData }
+    })
   }
 
-  const repo = workspace.repo
-  const branches = workspace.branches
-
-  // import {
-  //   BRANCH_LIBRARY,
-  //   BRANCH_LIST,
-  //   REPOSITORY_NAME,
-  //   WORKSPACE_SUMMARY,
-  // } from "@/lib/mockData"
-  //
-  // const [repoName, _setRepoName] = useState(REPOSITORY_NAME)
-  // const [repoSummary, _setRepoSummary] = useState(WORKSPACE_SUMMARY)
-  // const [branchesLegacy, _setBranchesLegacy] = useState<string[]>(BRANCH_LIST)
-  // const [branchDetailsLegacy, setBranchDetailsLegacy] = useState<BranchLibrary>({
-  //   main: BRANCH_LIBRARY["main"],
-  // })
-  // const [panelsLegacy, setPanelsLegacy] = useState<string[]>(["main"])
-  //
-  // const handleAddPanelLegacy = (branchId: string) => {
-  //   if (!branchId) return
-  //   setPanelsLegacy((prev) => (prev.includes(branchId) ? prev : [...prev, branchId]))
-  //   setBranchDetailsLegacy((prev) => {
-  //     if (Object.prototype.hasOwnProperty.call(prev, branchId)) return prev
-  //     if (!Object.prototype.hasOwnProperty.call(BRANCH_LIBRARY, branchId)) return prev
-  //     const branchData = BRANCH_LIBRARY[branchId]
-  //     if (!branchData) return prev
-  //     return { ...prev, [branchId]: branchData }
-  //   })
-  // }
-  //
-  // The panel rendering (mermaid/file tree, skeletons, dropdown) that used
-  // these legacy variables has been removed from the active JSX to keep this
-  // file focused on the API + routing behavior. Andrew’s UI ticket will
-  // implement the full diagram layout.
+  const unusedBranches = useMemo(() => {
+    const used = new Set(panels)
+    return branches.filter((branchId) => !used.has(branchId))
+  }, [branches, panels])
 
   return (
-    <main className="flex flex-1 flex-col gap-8 px-4 pb-12 sm:px-0">
-      {/* Simple repo header; detailed layout comes in the UI ticket */}
-      <section className="mt-6 flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)]">
-          <GithubIcon
-            className="h-7 w-7 text-[color:var(--page-foreground)]"
-            aria-hidden
-          />
-        </div>
-        <div>
-          <p data-testid="repo-name" className="text-lg font-semibold">
-            {repo.name}
-          </p>
-          <p
-            data-testid="repo-summary"
-            className="text-sm text-[color:var(--muted-text)]"
-          >
-            {repo.description || "No description provided."}
-          </p>
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold">Branches</h2>
-        {branches.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No branches available in this mock workspace.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {branches.map((b) => (
-              <li key={b.id} className="flex items-center gap-3 text-sm">
-                <span className="font-mono">{b.name}</span>
-                <button
-                  type="button"
-                  className="text-xs underline disabled:opacity-60"
-                  disabled={loadingBranchId === b.id}
-                  onClick={() => void handleFetchBranch(b.id)}
+    <main className="flex flex-1 flex-col gap-10 px-4 pb-12 sm:px-0">
+      <section className="rounded-3xl border border-[color:var(--panel-border)] bg-[color:var(--panel-bg)] shadow-lg">
+        <div className="flex flex-col gap-6 px-6 py-6 sm:px-8 sm:py-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="flex w-full items-center gap-3 sm:w-auto">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)] text-sm font-semibold sm:h-14 sm:w-14">
+                <GithubIcon
+                  className="h-7 w-7 text-[color:var(--page-foreground)]"
+                  aria-hidden
+                />
+              </div>
+              <div className="text-center text-left">
+                <p data-testid="repo-name" className="text-lg font-semibold">
+                  {repoName}
+                </p>
+                <p
+                  data-testid="repo-summary"
+                  className="text-sm text-[color:var(--muted-text)]"
                 >
-                  {loadingBranchId === b.id
-                    ? "Loading diagram…"
-                    : "Fetch diagram (mock)"}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+                  {repoSummary}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        {branchError && (
-          <p className="text-sm text-red-500">{branchError}</p>
-        )}
+        <div className="space-y-6 px-6 pb-10 sm:px-8">
+          {/* // implement panels here */}
+        </div>
+
+        <div className="flex flex-col items-center gap-3 border-t border-[color:var(--panel-border)] px-6 py-6 sm:px-8 sm:py-8">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                disabled={!unusedBranches.length}
+                className="flex items-center gap-2 rounded-full border-[3px] border-dashed border-[color:var(--panel-border)] px-6 py-6 text-base"
+              >
+                <Plus className="h-5 w-5" />
+                {unusedBranches.length
+                  ? "Add a new diagram for a branch"
+                  : "All tracked branches already visible."}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="center"
+              className="min-w-[16rem] max-w-[calc(100vw-2rem)] sm:max-w-none"
+            >
+              {unusedBranches.map((branchId) => {
+                const branch: BranchDiagram | undefined =
+                  Object.prototype.hasOwnProperty.call(branchDetails, branchId)
+                    ? branchDetails[branchId]
+                    : undefined
+                return (
+                  <DropdownMenuItem
+                    data-branch-id={branchId}
+                    key={branchId}
+                    onSelect={() => {
+                      handleAddPanel(branchId)
+                    }}
+                    className="flex w-full flex-col items-start gap-0.5"
+                  >
+                    <span className="font-medium text-[color:var(--page-foreground)]">
+                      {branchId}
+                    </span>
+                    <span
+                      data-testid="dropdown-item-last-generated"
+                      className="text-xs text-[color:var(--muted-text)]"
+                    >
+                      {branch
+                        ? `Last generated ${branch.lastGenerated}`
+                        : "Not generated yet"}
+                    </span>
+                  </DropdownMenuItem>
+                )
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {unusedBranches.length > 0 && (
+            <p className="text-center text-sm text-[color:var(--muted-text)] sm:text-left">
+              Pick a branch to generate a new diagram workspace card.
+            </p>
+          )}
+        </div>
       </section>
     </main>
   )
