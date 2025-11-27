@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // ignore unused vars for now as we build out the page
 
 import { Button } from "@/components/ui/button"
@@ -44,7 +43,14 @@ export function Diagram() {
       _setRepoSummary(workspace.repo.description ?? WORKSPACE_SUMMARY)
     }
   }, [workspace])
-  const [branches, _setBranches] = useState<string[]>(BRANCH_LIST)
+  const [branches, setBranches] = useState<string[]>(
+    workspace?.branches?.map((b) => b.name) ?? BRANCH_LIST,
+  )
+  useEffect(() => {
+  if (workspace?.branches) {
+    setBranches(workspace.branches.map((b) => b.name))
+  }
+  }, [workspace])
   const [branchDetails, setBranchDetails] = useState<BranchLibrary>({
     main: BRANCH_LIBRARY["main"],
   }) 

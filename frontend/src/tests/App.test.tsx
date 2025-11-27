@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest"
 import { fireEvent, render, waitFor, within } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { WorkspaceProvider } from "@/lib/workspaceContext"
 
 import App from "../App"
 
@@ -105,6 +106,11 @@ describe("App", () => {
     vi.restoreAllMocks()
   })
 
+  render(
+    <WorkspaceProvider>
+      <App />
+    </WorkspaceProvider>
+  )
   it("initializes with the system dark theme when preferred", () => {
     mockMatchMedia(true)
 

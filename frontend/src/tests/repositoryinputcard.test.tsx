@@ -8,6 +8,7 @@ import {
   cleanup,
 } from "@testing-library/react"
 import { Home } from "@/pages/Home"
+import { WorkspaceProvider } from "@/lib/workspaceContext"
 
 const mockNavigate = vi.fn()
 vi.mock("react-router-dom", async (importOriginal) => {
@@ -38,6 +39,12 @@ describe("Home Component (Integration Test)", () => {
     vi.clearAllMocks()
     cleanup()
   })
+
+  render(
+    <WorkspaceProvider>
+      <Home />
+    </WorkspaceProvider>,
+  )
 
   // --- Test 1: Successful URL Submission ---
   it("allows for successful submission of a valid GitHub URL", () => {
