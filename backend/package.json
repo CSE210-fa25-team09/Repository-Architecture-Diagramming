@@ -6,7 +6,17 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --passWithNoTests"
+    "test": "jest --passWithNoTests --coverage"
+  },
+  "jest": {
+    "coverageReporters": [
+      "text",
+      "json-summary"
+    ],
+    "testEnvironment": "node",
+    "transformIgnorePatterns": [
+      "node_modules/(?!(@octokit|universal-user-agent|before-after-hook|is-plain-object|universal-github-app-jwt))"
+    ]
   },
   "keywords": [],
   "author": "",
@@ -19,6 +29,12 @@
     "express": "^5.1.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.26.0",
+    "@babel/preset-env": "^7.26.0",
+    "@eslint/js": "^9.39.1",
+    "babel-jest": "^29.7.0",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0",
     "jest": "^30.2.0",
     "supertest": "^7.1.4"
   }
