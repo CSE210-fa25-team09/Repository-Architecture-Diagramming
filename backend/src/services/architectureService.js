@@ -34,7 +34,8 @@ function parseGithubUrl(repoUrl = '') {
     throw new UserInputError('Invalid GitHub URL.');
   }
 
-  if (!parsed.hostname.includes('github.com')) {
+  if (parsed.hostname !== 'github.com' && parsed.hostname !== 'www.github.com') {
+    console.log(parsed.hostname);
     throw new UserInputError('Provided URL must be a GitHub repository URL.');
   }
 
@@ -70,7 +71,7 @@ function flattenTree(tree) {
   return result;
 }
 
-function summarizeTreeStructure(tree, limit = 40) {
+function summarizeTreeStructure(tree, limit = 60) {
   const flattened = flattenTree(tree);
   const lines = [];
   for (const node of flattened) {

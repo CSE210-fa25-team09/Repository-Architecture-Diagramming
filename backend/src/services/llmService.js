@@ -18,14 +18,34 @@ function ensureConfigured() {
   }
 }
 
+function checkPayload(payload) {
+  // check temperature range
+  const { temperature } = payload;
+  if (temperature < 0 || temperature > 1) {
+    throw Object.assign(
+      new Error('Temperature must be between 0 and 1.'),
+      { statusCode: 400 }
+    );
+  }
+
+  if (!Number.isInteger(payload.max_tokens) || payload.max_tokens <= 0) {
+    throw Object.assign(
+      new Error('maxTokens must be a positive integer.'),
+      { statusCode: 400 }
+    );
+  }
+}
+
 async function createChatCompletion({ messages, temperature = 0.1, maxTokens = 800 }) {
   ensureConfigured();
+  
   const payload = {
     model: LLM_MODEL,
     messages,
     temperature,
     max_tokens: maxTokens
   };
+  checkPayload(payload);
 
   const response = await fetch(LLM_API_URL, {
     method: 'POST',
