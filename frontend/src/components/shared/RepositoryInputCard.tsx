@@ -47,8 +47,7 @@ export default function RepositoryInputCard() {
     }
 
     // This is what we send to the mock API (it does not really matter yet)
-    const repoIdentifier =
-      result.type === "url" ? repoUrl : zipFile!.name
+    const repoIdentifier = result.type === "url" ? repoUrl : zipFile!.name
 
     setLoading(true)
     try {

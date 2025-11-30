@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { Home } from "@/pages/Home"
 import { SAMPLE_REPOS } from "@/lib/repoData"
+import { WorkspaceProvider } from "@/lib/workspaceContext"
 
 const HISTORY_KEY = "repo-history"
 const ROW_VISIBLE = 4
@@ -15,7 +16,9 @@ beforeEach(() => {
 const renderHome = () =>
   render(
     <MemoryRouter>
-      <Home />
+      <WorkspaceProvider>
+        <Home />
+      </WorkspaceProvider>
     </MemoryRouter>,
   )
 

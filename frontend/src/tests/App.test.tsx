@@ -7,6 +7,30 @@ import { WorkspaceProvider } from "@/lib/workspaceContext"
 
 import App from "../App"
 
+const ensureBaseMatchMedia = () => {
+  const baseImpl = (query: string) =>
+    ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }) as MediaQueryList
+
+  if (!window.matchMedia) {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      configurable: true,
+      value: vi.fn(baseImpl),
+    })
+  }
+}
+
+ensureBaseMatchMedia()
+
 type MatchMediaMock = MediaQueryList & { dispatch: (matches: boolean) => void }
 
 const createMatchMediaMock = (initialMatches: boolean): MatchMediaMock => {
@@ -85,7 +109,9 @@ const getLatest = <T,>(items: T[]): T => items[items.length - 1]
 const renderApp = (initialEntries: string[] = ["/"]) => {
   const utils = render(
     <MemoryRouter initialEntries={initialEntries}>
-      <App />
+      <WorkspaceProvider>
+        <App />
+      </WorkspaceProvider>
     </MemoryRouter>,
   )
   const getRoot = () => {
@@ -106,11 +132,6 @@ describe("App", () => {
     vi.restoreAllMocks()
   })
 
-  render(
-    <WorkspaceProvider>
-      <App />
-    </WorkspaceProvider>
-  )
   it("initializes with the system dark theme when preferred", () => {
     mockMatchMedia(true)
 

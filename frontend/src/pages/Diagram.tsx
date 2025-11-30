@@ -30,9 +30,7 @@ export type BranchLibrary = Record<string, BranchDiagram>
 export function Diagram() {
   const { workspace } = useWorkspace()
 
-  const [repoName, _setRepoName] = useState(
-    workspace?.repo?.name ?? REPOSITORY_NAME,
-  )
+  const [repoName, _setRepoName] = useState(workspace?.repo?.name ?? REPOSITORY_NAME)
   const [repoSummary, _setRepoSummary] = useState(
     workspace?.repo?.description ?? WORKSPACE_SUMMARY,
   )
@@ -43,17 +41,20 @@ export function Diagram() {
       _setRepoSummary(workspace.repo.description ?? WORKSPACE_SUMMARY)
     }
   }, [workspace])
+
   const [branches, setBranches] = useState<string[]>(
     workspace?.branches?.map((b) => b.name) ?? BRANCH_LIST,
   )
+
   useEffect(() => {
-  if (workspace?.branches) {
-    setBranches(workspace.branches.map((b) => b.name))
-  }
+    if (workspace?.branches) {
+      setBranches(workspace.branches.map((b) => b.name))
+    }
   }, [workspace])
+
   const [branchDetails, setBranchDetails] = useState<BranchLibrary>({
     main: BRANCH_LIBRARY["main"],
-  }) 
+  })
 
   // use branch name as panel identifier
   const [panels, setPanels] = useState<string[]>(["main"])

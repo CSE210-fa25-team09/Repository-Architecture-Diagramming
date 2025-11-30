@@ -17,9 +17,7 @@
         "name": "src",
         "path": "src",
         "type": "dir",
-        "children": [
-          { "name": "index.tsx", "path": "src/index.tsx", "type": "file" }
-        ]
+        "children": [{ "name": "index.tsx", "path": "src/index.tsx", "type": "file" }]
       }
     ]
   },

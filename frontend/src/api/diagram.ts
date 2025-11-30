@@ -98,9 +98,7 @@ export async function fetchBranchDiagram(
   branchId: string,
 ): Promise<BranchDiagramResponse> {
   if (!cachedRepoCoords) {
-    throw new Error(
-      "No repository info cached—call fetchInitialWorkspace() first.",
-    )
+    throw new Error("No repository info cached—call fetchInitialWorkspace() first.")
   }
 
   const { owner, repo } = cachedRepoCoords
@@ -111,9 +109,7 @@ export async function fetchBranchDiagram(
   const resp = await fetch(url)
 
   if (!resp.ok) {
-    throw new Error(
-      `Failed to fetch branch diagram: ${resp.status} ${resp.statusText}`,
-    )
+    throw new Error(`Failed to fetch branch diagram: ${resp.status} ${resp.statusText}`)
   }
 
   const data: {

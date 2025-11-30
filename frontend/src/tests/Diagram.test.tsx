@@ -25,11 +25,11 @@ describe("Diagram", () => {
   })
 
   const renderDiagram = () =>
-  render(
-    <WorkspaceProvider>
-      <Diagram />
-    </WorkspaceProvider>,
-  )
+    render(
+      <WorkspaceProvider>
+        <Diagram />
+      </WorkspaceProvider>,
+    )
 
   it("disables the add button once every tracked branch has been added", async () => {
     renderDiagram()
