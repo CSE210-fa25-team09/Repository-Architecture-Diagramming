@@ -7,7 +7,9 @@ import {
   within,
   cleanup,
 } from "@testing-library/react"
+import { MemoryRouter } from "react-router-dom"
 import { Home } from "@/pages/Home"
+import { WorkspaceProvider } from "@/lib/workspaceContext"
 
 const mockNavigate = vi.fn()
 vi.mock("react-router-dom", async (importOriginal) => {
@@ -17,6 +19,13 @@ vi.mock("react-router-dom", async (importOriginal) => {
     useNavigate: () => mockNavigate,
   }
 })
+
+vi.mock("@/api/diagram", () => ({
+  fetchInitialWorkspace: vi.fn().mockResolvedValue({
+    repo: { name: "test/repo", description: "desc" },
+    branches: [],
+  }),
+}))
 
 const createMockFile = (name: string, size: number, mimeType: string) => {
   const file = new File(["content"], name, { type: mimeType })
@@ -32,16 +41,28 @@ function getFormElements() {
   })
   return { formElement, submitButton }
 }
+
+function renderHome() {
+  return render(
+    <MemoryRouter>
+      <WorkspaceProvider>
+        <Home />
+      </WorkspaceProvider>
+    </MemoryRouter>,
+  )
+}
+
 describe("Home Component (Integration Test)", () => {
   // Reset the mock functions after each test to ensure a clean slate
   afterEach(() => {
     vi.clearAllMocks()
     cleanup()
+    window.localStorage.clear()
   })
 
   // --- Test 1: Successful URL Submission ---
-  it("allows for successful submission of a valid GitHub URL", () => {
-    render(<Home />)
+  it("allows for successful submission of a valid GitHub URL", async () => {
+    renderHome()
 
     // Use native Chai assertion (.toBeTruthy()) instead of .toBeInTheDocument()
     const urlInput = screen.getByLabelText(/Enter GitHub Repo URL/i)
@@ -59,7 +80,7 @@ describe("Home Component (Integration Test)", () => {
 
     // Assert: Check navigation
     const expectedRoute = `/diagram?repo=${encodeURIComponent(validUrl)}`
-    expect(mockNavigate).toHaveBeenCalledWith(expectedRoute)
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith(expectedRoute))
 
     // Assert: Check for absence of error message
     expect(screen.queryByText(/Please enter a valid GitHub repo URL/i)).toBeNull()
@@ -67,7 +88,7 @@ describe("Home Component (Integration Test)", () => {
 
   // --- Test 2: Invalid Input Failure ---
   it("displays an error message when the form is submitted without valid input", () => {
-    render(<Home />)
+    renderHome()
 
     // Select the primary submit button
     const submitButton = screen.getAllByRole("button", { name: /Generate Diagram/i })[0]
@@ -85,7 +106,7 @@ describe("Home Component (Integration Test)", () => {
 
   // --- Test 3: Successful Zip File Submission ---
   it("allows for navigation via zip file upload", async () => {
-    render(<Home />)
+    renderHome()
 
     const mockZipFile = createMockFile("full-test.zip", 2048, "application/zip")
 

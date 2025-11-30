@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // ignore unused vars for now as we build out the page
 
 import { Button } from "@/components/ui/button"
@@ -15,7 +14,8 @@ import {
   WORKSPACE_SUMMARY,
 } from "@/lib/mockData"
 import { GithubIcon, Plus } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
+import { useWorkspace } from "@/lib/workspaceContext"
 
 export type BranchDiagram = {
   id: string
@@ -28,13 +28,33 @@ export type BranchDiagram = {
 export type BranchLibrary = Record<string, BranchDiagram>
 
 export function Diagram() {
-  // Prepare repo details for initial view
-  const [repoName, _setRepoName] = useState(REPOSITORY_NAME)
-  const [repoSummary, _setRepoSummary] = useState(WORKSPACE_SUMMARY)
-  const [branches, _setBranches] = useState<string[]>(BRANCH_LIST) // list of branch IDs
+  const { workspace } = useWorkspace()
+
+  const [repoName, _setRepoName] = useState(workspace?.repo?.name ?? REPOSITORY_NAME)
+  const [repoSummary, _setRepoSummary] = useState(
+    workspace?.repo?.description ?? WORKSPACE_SUMMARY,
+  )
+
+  useEffect(() => {
+    if (workspace?.repo) {
+      _setRepoName(workspace.repo.name)
+      _setRepoSummary(workspace.repo.description ?? WORKSPACE_SUMMARY)
+    }
+  }, [workspace])
+
+  const [branches, setBranches] = useState<string[]>(
+    workspace?.branches?.map((b) => b.name) ?? BRANCH_LIST,
+  )
+
+  useEffect(() => {
+    if (workspace?.branches) {
+      setBranches(workspace.branches.map((b) => b.name))
+    }
+  }, [workspace])
+
   const [branchDetails, setBranchDetails] = useState<BranchLibrary>({
     main: BRANCH_LIBRARY["main"],
-  }) // branch ID to details map, initially only main branch
+  })
 
   // use branch name as panel identifier
   const [panels, setPanels] = useState<string[]>(["main"])
