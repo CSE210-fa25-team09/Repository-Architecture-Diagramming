@@ -1,5 +1,3 @@
-// ignore unused vars for now as we build out the page
-
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -8,30 +6,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-import {
-  BRANCH_LIBRARY,
-  BRANCH_LIST,
-  REPOSITORY_NAME,
-  WORKSPACE_SUMMARY,
-} from "@/lib/mockData"
+import { BRANCH_LIST, REPOSITORY_NAME, WORKSPACE_SUMMARY } from "@/lib/mockData"
 import { GithubIcon, Plus } from "lucide-react"
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useState, useEffect, useCallback } from "react"
 import { useWorkspace } from "@/lib/workspaceContext"
 
-import { DiagramPanel } from "@/components/shared/DiagramPanel"
+import {
+  DiagramPanel,
+  type BranchInfo,
+  type BranchLibrary,
+} from "@/components/shared/DiagramPanel"
+import { fetchBranchDiagram, fetchRepoTree, fetchInitialWorkspace } from "@/api/diagram"
+import { formatLastGenerated, repoTreeToAscii } from "@/lib/utils"
 
-export type BranchDiagram = {
-  id: string
-  label: string
-  lastGenerated: string
-  diagram: string
-  fileTree: string
-  commitMessage: string
-  commitNumber: string
-  dependencyGraph: string
-}
-
-type BranchId = keyof typeof BRANCH_LIBRARY
+type BranchId = string
 
 type DiagramPanelState = {
   id: string
@@ -39,23 +27,26 @@ type DiagramPanelState = {
 }
 
 const DEFAULT_DIAGRAMS: DiagramPanelState[] = [{ id: "diagram-1", branchId: "main" }]
-
 const ADD_PANEL_TRIGGER_ID = "diagram-add-trigger"
 
-export type BranchLibrary = Record<string, BranchDiagram>
-
 export function Diagram() {
-  const { workspace } = useWorkspace()
+  const {
+    workspace,
+    setWorkspaceForRepo,
+    setBranchCacheForRepo,
+    branchCacheMap,
+    setCurrentRepoKey,
+  } = useWorkspace()
 
-  const [repoName, _setRepoName] = useState(workspace?.repo?.name ?? REPOSITORY_NAME)
-  const [repoSummary, _setRepoSummary] = useState(
+  const [repoName, setRepoName] = useState(workspace?.repo?.name ?? REPOSITORY_NAME)
+  const [repoSummary, setRepoSummary] = useState(
     workspace?.repo?.description ?? WORKSPACE_SUMMARY,
   )
 
   useEffect(() => {
     if (workspace?.repo) {
-      _setRepoName(workspace.repo.name)
-      _setRepoSummary(workspace.repo.description ?? WORKSPACE_SUMMARY)
+      setRepoName(workspace.repo.name)
+      setRepoSummary(workspace.repo.description ?? WORKSPACE_SUMMARY)
     }
   }, [workspace])
 
@@ -63,16 +54,182 @@ export function Diagram() {
     workspace?.branches?.map((b) => b.name) ?? BRANCH_LIST,
   )
 
+  const [branchDetails, setBranchDetails] = useState<BranchLibrary>({} as BranchLibrary)
+  const [panels, setPanels] = useState<DiagramPanelState[]>(DEFAULT_DIAGRAMS)
+
+  const repoKey = workspace?.repo?.name ?? null
+
+  useEffect(() => {
+    if (workspace?.repo?.name) {
+      setCurrentRepoKey(workspace.repo.name)
+    }
+  }, [workspace, setCurrentRepoKey])
+
+  useEffect(() => {
+    if (repoKey && branchCacheMap[repoKey]) {
+      setBranchDetails(branchCacheMap[repoKey])
+    }
+  }, [branchCacheMap, repoKey])
+
   useEffect(() => {
     if (workspace?.branches) {
       setBranches(workspace.branches.map((b) => b.name))
     }
   }, [workspace])
 
-  const [branchDetails, setBranchDetails] = useState<BranchLibrary>({
-    main: BRANCH_LIBRARY["main"],
-  })
-  const [panels, setPanels] = useState<DiagramPanelState[]>(DEFAULT_DIAGRAMS)
+  useEffect(() => {
+    if (workspace) return
+    let mounted = true
+    const loadWorkspace = async () => {
+      try {
+        const params = new URLSearchParams(window.location.search)
+        const repoParam = params.get("repo")
+        const repoIdentifier =
+          repoParam && repoParam.trim().length > 0
+            ? decodeURIComponent(repoParam)
+            : BRANCH_LIST[0]
+        const ws = await fetchInitialWorkspace(repoIdentifier)
+        if (!mounted) return
+        setCurrentRepoKey(ws.repo.name)
+        setWorkspaceForRepo(ws.repo.name, ws)
+        setRepoName(ws.repo.name)
+        setRepoSummary(ws.repo.description ?? WORKSPACE_SUMMARY)
+        setBranches(ws.branches.map((b) => b.name))
+        const cachedBranches = branchCacheMap[ws.repo.name]
+        setBranchDetails(cachedBranches ? cachedBranches : ({} as BranchLibrary))
+      } catch (err) {
+        console.error("Failed to initialize workspace", err)
+      }
+    }
+    void loadWorkspace()
+    return () => {
+      mounted = false
+    }
+  }, [workspace, setCurrentRepoKey, setWorkspaceForRepo, branchCacheMap])
+
+  const ensureBranchData = useCallback(
+    async (branchId: string) => {
+      if (!repoKey || !workspace) return
+      const repoCache = repoKey ? branchCacheMap[repoKey] : undefined
+      const existingCached = branchDetails[branchId]
+      const cachedFromRepo = repoCache ? repoCache[branchId] : undefined
+
+      if (cachedFromRepo && !branchDetails[branchId]) {
+        setBranchDetails((prev) => ({ ...prev, [branchId]: cachedFromRepo }))
+        return
+      }
+
+      if (
+        existingCached &&
+        !existingCached.diagramLoading &&
+        !existingCached.treeLoading &&
+        existingCached.diagram &&
+        existingCached.fileTree
+      ) {
+        return
+      }
+
+      setBranchDetails((prev) => {
+        const existing = prev[branchId]
+        if (existing?.diagramLoading || existing?.treeLoading) return prev
+        const fallback: BranchInfo = existing ?? {
+          id: branchId,
+          label: branchId,
+          lastGenerated: "",
+          diagram: "",
+          fileTree: "",
+          commitMessage: "",
+          commitNumber: "",
+          dependencyGraph: "",
+          diagramError: undefined,
+          treeError: undefined,
+        }
+        return {
+          ...prev,
+          [branchId]: { ...fallback, diagramLoading: true, treeLoading: true },
+        }
+      })
+
+      const loadDiagram = async () => {
+        try {
+          const diagramResp = await fetchBranchDiagram(branchId)
+          const formattedTimestamp = formatLastGenerated(diagramResp.timestamp)
+          setBranchDetails((prev) => {
+            const existing = prev[branchId]
+            if (!existing) return prev
+            const updated: BranchLibrary = {
+              ...prev,
+              [branchId]: {
+                ...existing,
+                lastGenerated: formattedTimestamp || "Just now",
+                diagram: diagramResp.internalDependencies,
+                commitMessage: diagramResp.commitMessage,
+                commitNumber: diagramResp.commitId,
+                dependencyGraph: diagramResp.allDependencies,
+                diagramLoading: false,
+                diagramError: undefined,
+              },
+            }
+            if (repoKey) {
+              setBranchCacheForRepo(repoKey, updated)
+            }
+            return updated
+          })
+        } catch (err) {
+          console.error("Failed to load diagram", err)
+          setBranchDetails((prev) => {
+            const existing = prev[branchId]
+            if (!existing) return prev
+            const message =
+              err instanceof Error
+                ? err.message
+                : "Failed to load diagram for this branch."
+            return {
+              ...prev,
+              [branchId]: { ...existing, diagramLoading: false, diagramError: message },
+            }
+          })
+        }
+      }
+
+      const loadTree = async () => {
+        try {
+          const treeResp = await fetchRepoTree(branchId)
+          const formattedTree = repoTreeToAscii(treeResp.tree, repoName ?? branchId)
+          setBranchDetails((prev) => {
+            const existing = prev[branchId]
+            if (!existing) return prev
+            const updated: BranchLibrary = {
+              ...prev,
+              [branchId]: { ...existing, fileTree: formattedTree, treeLoading: false },
+            }
+            if (repoKey) {
+              setBranchCacheForRepo(repoKey, updated)
+            }
+            return updated
+          })
+        } catch (err) {
+          console.error("Failed to load repo tree", err)
+          setBranchDetails((prev) => {
+            const existing = prev[branchId]
+            if (!existing) return prev
+            const message =
+              err instanceof Error
+                ? err.message
+                : "Failed to load file tree for this branch."
+            return {
+              ...prev,
+              [branchId]: { ...existing, treeLoading: false, treeError: message },
+            }
+          })
+        }
+      }
+
+      void loadDiagram()
+      void loadTree()
+    },
+    [repoName, branchDetails, setBranchCacheForRepo, repoKey, workspace, branchCacheMap],
+  )
 
   const handleAddPanel = (branchId: string) => {
     if (!branchId) return
@@ -82,11 +239,9 @@ export function Diagram() {
         ? prev
         : [...prev, { id: newId, branchId }],
     )
-    setBranchDetails((prev) => {
-      const branchData = BRANCH_LIBRARY[branchId as BranchId]
-      if (!branchData || prev[branchId]) return prev
-      return { ...prev, [branchId]: branchData }
-    })
+    if (!branchDetails[branchId]) {
+      void ensureBranchData(branchId)
+    }
   }
 
   const handleRemovePanel = (diagramId: string) => {
@@ -94,12 +249,6 @@ export function Diagram() {
   }
 
   const handleSwitchBranch = (diagramId: string, branchId: BranchId) => {
-    setBranchDetails((prev) => {
-      const branchData = BRANCH_LIBRARY[branchId]
-      if (!branchData || prev[branchId]) return prev
-      return { ...prev, [branchId]: branchData }
-    })
-
     setPanels((prevPanels) => {
       const currentPanel = prevPanels.find((p) => p.id === diagramId)
       if (!currentPanel) return prevPanels
@@ -126,6 +275,10 @@ export function Diagram() {
         )
       }
     })
+
+    if (!branchDetails[branchId]) {
+      void ensureBranchData(branchId)
+    }
   }
 
   const unusedBranches = useMemo(() => {
@@ -136,6 +289,23 @@ export function Diagram() {
   const allUsedBranchIds = useMemo(() => {
     return new Set(panels.map((p) => p.branchId))
   }, [panels])
+
+  useEffect(() => {
+    if (!repoKey || !workspace) return
+    panels.forEach((panel) => {
+      if (!branchDetails[panel.branchId]) {
+        const repoCache = branchCacheMap[repoKey]
+        if (repoCache && repoCache[panel.branchId]) {
+          setBranchDetails((prev) => ({
+            ...prev,
+            [panel.branchId]: repoCache[panel.branchId],
+          }))
+          return
+        }
+        void ensureBranchData(panel.branchId)
+      }
+    })
+  }, [panels, ensureBranchData, branchDetails, repoKey, workspace, branchCacheMap])
 
   return (
     <main className="flex flex-1 flex-col gap-10 px-4 pb-12 sm:px-0">
@@ -166,8 +336,18 @@ export function Diagram() {
 
         <div className="space-y-6 px-6 pb-10 sm:px-8">
           {panels.map((panel) => {
-            const branch = branchDetails[panel.branchId] ?? BRANCH_LIBRARY[panel.branchId]
-            if (!branch) return null
+            const branch = branchDetails[panel.branchId] ?? {
+              id: panel.branchId,
+              label: panel.branchId,
+              lastGenerated: "Loading...",
+              diagram: "",
+              fileTree: "",
+              commitMessage: "",
+              commitNumber: "",
+              dependencyGraph: "",
+              diagramLoading: true,
+              treeLoading: true,
+            }
 
             return (
               <DiagramPanel
@@ -204,7 +384,7 @@ export function Diagram() {
               className="min-w-[16rem] max-w-[calc(100vw-2rem)] sm:max-w-none"
             >
               {unusedBranches.map((branchId) => {
-                const branch: BranchDiagram | undefined = branchDetails[branchId]
+                const branch = branchDetails[branchId]
 
                 return (
                   <DropdownMenuItem
@@ -222,7 +402,6 @@ export function Diagram() {
                       data-testid="dropdown-item-last-generated"
                       className="text-xs text-[color:var(--muted-text)]"
                     >
-                      {/* 💡 FIX: Check if lastGenerated exists and is not empty */}
                       {branch?.lastGenerated
                         ? `Last generated ${branch.lastGenerated}`
                         : "Not generated yet"}

@@ -12,7 +12,7 @@ import { useWorkspace } from "@/lib/workspaceContext"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 export default function RepositoryInputCard() {
   const navigate = useNavigate()
-  const { setWorkspace } = useWorkspace()
+  const { setWorkspaceForRepo, setCurrentRepoKey } = useWorkspace()
   const [repoUrl, setRepoUrl] = React.useState("")
   const [zipFile, setZipFile] = React.useState<File | null>(null)
   const [error, setError] = React.useState("")
@@ -55,7 +55,8 @@ export default function RepositoryInputCard() {
       const workspace = await fetchInitialWorkspace(repoIdentifier)
 
       // 2) Store in global context
-      setWorkspace(workspace)
+      setWorkspaceForRepo(workspace.repo.name, workspace)
+      setCurrentRepoKey(workspace.repo.name)
 
       // 3) Navigate to diagram page (keep existing query params for future use)
       const route =
