@@ -42,12 +42,12 @@ describe("Diagram", () => {
 
     // 2. Click the first item
     const firstTarget = initialMenuItems[0]
-    
+
     // FIX: Match either "Last generated" OR "Not generated" to handle any mock data state
-    expect(within(firstTarget).getByTestId("dropdown-item-last-generated")).toHaveTextContent(
-      /Last generated|Not generated/i,
-    )
-    
+    expect(
+      within(firstTarget).getByTestId("dropdown-item-last-generated"),
+    ).toHaveTextContent(/Last generated|Not generated/i)
+
     fireEvent.click(firstTarget)
 
     // 3. Loop through any remaining branches and add them one by one
@@ -56,10 +56,10 @@ describe("Diagram", () => {
       // Re-open the menu
       fireEvent.pointerDown(addButton)
       fireEvent.click(addButton)
-      
+
       // Get the current list of items
       const menuItems = await screen.findAllByRole("menuitem")
-      
+
       // Click the first available item in the list
       if (menuItems.length > 0) {
         fireEvent.click(menuItems[0])

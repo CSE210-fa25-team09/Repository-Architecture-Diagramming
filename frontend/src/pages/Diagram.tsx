@@ -191,14 +191,14 @@ export function Diagram() {
                       {branchId}
                     </span>
                     <span
-  data-testid="dropdown-item-last-generated"
-  className="text-xs text-[color:var(--muted-text)]"
->
-  {/* 💡 FIX: Check if lastGenerated exists and is not empty */}
-  {branch?.lastGenerated
-    ? `Last generated ${branch.lastGenerated}`
-    : "Not generated yet"}
-</span>
+                      data-testid="dropdown-item-last-generated"
+                      className="text-xs text-[color:var(--muted-text)]"
+                    >
+                      {/* 💡 FIX: Check if lastGenerated exists and is not empty */}
+                      {branch?.lastGenerated
+                        ? `Last generated ${branch.lastGenerated}`
+                        : "Not generated yet"}
+                    </span>
                   </DropdownMenuItem>
                 )
               })}
