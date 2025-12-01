@@ -1,10 +1,22 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "test.js",
+  "description": "Repository Architecture Diagramming API",
+  "main": "server.js",
   "scripts": {
-    "test": "jest --passWithNoTests"
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "jest --passWithNoTests --coverage"
+  },
+  "jest": {
+    "coverageReporters": [
+      "text",
+      "json-summary"
+    ],
+    "testEnvironment": "node",
+    "transformIgnorePatterns": [
+      "node_modules/(?!(@octokit|universal-user-agent|before-after-hook|is-plain-object|universal-github-app-jwt))"
+    ]
   },
   "keywords": [],
   "author": "",
@@ -12,9 +24,18 @@
   "type": "module",
   "dependencies": {
     "@octokit/rest": "^22.0.1",
-    "dotenv": "^17.2.3"
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0"
   },
   "devDependencies": {
-    "jest": "^30.2.0"
+    "@babel/core": "^7.26.0",
+    "@babel/preset-env": "^7.26.0",
+    "@eslint/js": "^9.39.1",
+    "babel-jest": "^29.7.0",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0",
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4"
   }
 }

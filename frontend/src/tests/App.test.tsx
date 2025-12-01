@@ -3,8 +3,33 @@ import "@testing-library/jest-dom/vitest"
 import { fireEvent, render, waitFor, within } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { WorkspaceProvider } from "@/lib/workspaceContext"
 
 import App from "../App"
+
+const ensureBaseMatchMedia = () => {
+  const baseImpl = (query: string) =>
+    ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }) as MediaQueryList
+
+  if (!window.matchMedia) {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      configurable: true,
+      value: vi.fn(baseImpl),
+    })
+  }
+}
+
+ensureBaseMatchMedia()
 
 type MatchMediaMock = MediaQueryList & { dispatch: (matches: boolean) => void }
 
@@ -84,7 +109,9 @@ const getLatest = <T,>(items: T[]): T => items[items.length - 1]
 const renderApp = (initialEntries: string[] = ["/"]) => {
   const utils = render(
     <MemoryRouter initialEntries={initialEntries}>
-      <App />
+      <WorkspaceProvider>
+        <App />
+      </WorkspaceProvider>
     </MemoryRouter>,
   )
   const getRoot = () => {

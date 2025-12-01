@@ -1,4 +1,8 @@
 import { Octokit } from "@octokit/rest";
+import dotenv from 'dotenv';
+
+// Ensure environment variables are loaded
+dotenv.config();
 
 // Rate limited to 60 req per hour without GITHUB_TOKEN, 5000 with token
 const octokit = process.env.GITHUB_TOKEN
@@ -49,23 +53,18 @@ async function getContent(owner, repo, path, ref = "") {
 }
 
 async function getRepoTree(owner, repo, path = "", ref = "") {
-  // Get the SHA of the branch/ref
+  // Get the default branch if ref not specified
   if (!ref) {
     const response = await octokit.repos.get({ owner, repo });
     updateRateLimitFromHeaders(response.headers);
     ref = response.data.default_branch;
   }
   
-  // Get the commit SHA
-  const commitResponse = await octokit.repos.getCommit({ owner, repo, ref });
-  updateRateLimitFromHeaders(commitResponse.headers);
-  const treeSha = commitResponse.data.commit.tree.sha;
-  
-  // Get entire tree recursively in ONE API call
+  // Get entire tree recursively using branch reference (GitHub resolves it to commit SHA)
   const treeResponse = await octokit.git.getTree({
     owner,
     repo,
-    tree_sha: treeSha,
+    tree_sha: `${ref}`,  // GitHub API accepts branch names directly
     recursive: 'true'  // This gets the entire tree at once!
   });
   updateRateLimitFromHeaders(treeResponse.headers);
@@ -131,15 +130,18 @@ async function getAllBranches(owner, repo) {
   return response.map(branch => branch.name);
 }
 
+async function getDefaultBranch(owner, repo) {
+  const response = await octokit.repos.get({
+    "owner": owner,
+    "repo": repo
+  });
+  updateRateLimitFromHeaders(response.headers);
+  return response.data.default_branch;
+}
+
 async function getAllCommits(owner, repo, branch="") {
   if (!branch) {
-    // Get default branch
-    const response = await octokit.repos.get({
-      "owner": owner,
-      "repo": repo
-    });
-    updateRateLimitFromHeaders(response.headers);
-    branch = response.data.default_branch;
+    branch = await getDefaultBranch(owner, repo);
   }
   const commits = await octokit.paginate(octokit.repos.listCommits, {
     "owner": owner, 
@@ -177,7 +179,41 @@ async function getLatestCommit(owner, repo, branch = "") {
   });
   updateRateLimitFromHeaders(response.headers);
   
-  return response.data[0]?.sha?.substring(0, 7) || 'unknown'; // Return short SHA (7 chars)
+  const commit = response.data[0];
+  if (!commit) {
+    return { 
+      sha: 'unknown', 
+      fullSha: 'unknown',
+      message: 'No commits found',
+      author: 'unknown',
+      date: new Date().toISOString()
+    };
+  }
+  
+  return {
+    sha: commit.sha.substring(0, 7),
+    fullSha: commit.sha,
+    message: commit.commit.message,
+    author: commit.commit.author.name,
+    date: commit.commit.author.date
+  };
+}
+
+async function getRepoInfo(owner, repo) {
+  const response = await octokit.repos.get({
+    "owner": owner,
+    "repo": repo
+  });
+  updateRateLimitFromHeaders(response.headers);
+  
+  return {
+    description: response.data.description || '',
+    stars: response.data.stargazers_count,
+    language: response.data.language,
+    defaultBranch: response.data.default_branch,
+    createdAt: response.data.created_at,
+    updatedAt: response.data.updated_at
+  };
 }
 
 const githubService = {
@@ -185,8 +221,10 @@ const githubService = {
   getRepoTree,
   getFile,
   getAllBranches,
+  getDefaultBranch,
   getAllCommits,
   getLatestCommit,
+  getRepoInfo,
   getRateLimit
 };
 

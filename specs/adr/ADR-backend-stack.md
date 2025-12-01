@@ -3,7 +3,7 @@
 ADR \#: 003  
 Title: Backend Stack: Node.js \+ Express \+ JSON file storage  
 Date: 2025-11-06  
-Status: Proposed
+Status: Accepted
 
 ---
 
