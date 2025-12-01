@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+
 import {
   BRANCH_LIBRARY,
   BRANCH_LIST,
@@ -17,13 +18,29 @@ import { GithubIcon, Plus } from "lucide-react"
 import { useMemo, useState, useEffect } from "react"
 import { useWorkspace } from "@/lib/workspaceContext"
 
+import { DiagramPanel } from "@/components/shared/DiagramPanel"
+
 export type BranchDiagram = {
   id: string
   label: string
   lastGenerated: string
   diagram: string
   fileTree: string
+  commitMessage: string
+  commitNumber: string
+  dependencyGraph: string
 }
+
+type BranchId = keyof typeof BRANCH_LIBRARY
+
+type DiagramPanelState = {
+  id: string
+  branchId: BranchId
+}
+
+const DEFAULT_DIAGRAMS: DiagramPanelState[] = [{ id: "diagram-1", branchId: "main" }]
+
+const ADD_PANEL_TRIGGER_ID = "diagram-add-trigger"
 
 export type BranchLibrary = Record<string, BranchDiagram>
 
@@ -55,26 +72,70 @@ export function Diagram() {
   const [branchDetails, setBranchDetails] = useState<BranchLibrary>({
     main: BRANCH_LIBRARY["main"],
   })
-
-  // use branch name as panel identifier
-  const [panels, setPanels] = useState<string[]>(["main"])
+  const [panels, setPanels] = useState<DiagramPanelState[]>(DEFAULT_DIAGRAMS)
 
   const handleAddPanel = (branchId: string) => {
     if (!branchId) return
-    setPanels((prev) => (prev.includes(branchId) ? prev : [...prev, branchId]))
+    const newId = `diagram-${Date.now()}`
+    setPanels((prev) =>
+      prev.some((p) => p.branchId === branchId)
+        ? prev
+        : [...prev, { id: newId, branchId }],
+    )
     setBranchDetails((prev) => {
-      if (Object.prototype.hasOwnProperty.call(prev, branchId)) return prev
-      if (!Object.prototype.hasOwnProperty.call(BRANCH_LIBRARY, branchId)) return prev
-      const branchData = BRANCH_LIBRARY[branchId]
-      if (!branchData) return prev
+      const branchData = BRANCH_LIBRARY[branchId as BranchId]
+      if (!branchData || prev[branchId]) return prev
       return { ...prev, [branchId]: branchData }
     })
   }
 
+  const handleRemovePanel = (diagramId: string) => {
+    setPanels((prev) => prev.filter((panel) => panel.id !== diagramId))
+  }
+
+  const handleSwitchBranch = (diagramId: string, branchId: BranchId) => {
+    setBranchDetails((prev) => {
+      const branchData = BRANCH_LIBRARY[branchId]
+      if (!branchData || prev[branchId]) return prev
+      return { ...prev, [branchId]: branchData }
+    })
+
+    setPanels((prevPanels) => {
+      const currentPanel = prevPanels.find((p) => p.id === diagramId)
+      if (!currentPanel) return prevPanels
+      const initialBranchId = currentPanel.branchId
+
+      const otherPanelToSwap = prevPanels.find(
+        (p) => p.branchId === branchId && p.id !== diagramId,
+      )
+
+      if (otherPanelToSwap) {
+        const otherPanelId = otherPanelToSwap.id
+
+        return prevPanels.map((panel) => {
+          if (panel.id === diagramId) {
+            return { ...panel, branchId: branchId }
+          } else if (panel.id === otherPanelId) {
+            return { ...panel, branchId: initialBranchId }
+          }
+          return panel
+        })
+      } else {
+        return prevPanels.map((panel) =>
+          panel.id === diagramId ? { ...panel, branchId } : panel,
+        )
+      }
+    })
+  }
+
   const unusedBranches = useMemo(() => {
-    const used = new Set(panels)
-    return branches.filter((branchId) => !used.has(branchId))
+    const usedBranchIds = new Set(panels.map((p) => p.branchId))
+    return branches.filter((branchId) => !usedBranchIds.has(branchId))
   }, [branches, panels])
+
+  const allUsedBranchIds = useMemo(() => {
+    return new Set(panels.map((p) => p.branchId))
+  }, [panels])
 
   return (
     <main className="flex flex-1 flex-col gap-10 px-4 pb-12 sm:px-0">
@@ -104,18 +165,35 @@ export function Diagram() {
         </div>
 
         <div className="space-y-6 px-6 pb-10 sm:px-8">
-          {/* // implement panels here */}
+          {panels.map((panel) => {
+            const branch = branchDetails[panel.branchId] ?? BRANCH_LIBRARY[panel.branchId]
+            if (!branch) return null
+
+            return (
+              <DiagramPanel
+                key={panel.id}
+                branch={branch}
+                canRemove={panels.length > 1}
+                onRemove={() => handleRemovePanel(panel.id)}
+                onSwitchBranch={(branchId) => handleSwitchBranch(panel.id, branchId)}
+                usedBranchIds={allUsedBranchIds}
+                branches={branches}
+                branchDetails={branchDetails}
+              />
+            )
+          })}
         </div>
 
         <div className="flex flex-col items-center gap-3 border-t border-[color:var(--panel-border)] px-6 py-6 sm:px-8 sm:py-8">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
+                id={ADD_PANEL_TRIGGER_ID}
                 variant="outline"
                 disabled={!unusedBranches.length}
-                className="flex items-center gap-2 rounded-full border-[3px] border-dashed border-[color:var(--panel-border)] px-6 py-6 text-base"
+                className="flex items-center gap-2 rounded-full border-[3px] border-dashed border-[color:var(--panel-border)] px-2 py-4 h-auto whitespace-nowrap text-center text-xs sm:px-6 sm:py-3 xs:text-base"
               >
-                <Plus className="h-5 w-5" />
+                <Plus className="h-5 w-5 flex-shrink-0" />
                 {unusedBranches.length
                   ? "Add a new diagram for a branch"
                   : "All tracked branches already visible."}
@@ -126,10 +204,8 @@ export function Diagram() {
               className="min-w-[16rem] max-w-[calc(100vw-2rem)] sm:max-w-none"
             >
               {unusedBranches.map((branchId) => {
-                const branch: BranchDiagram | undefined =
-                  Object.prototype.hasOwnProperty.call(branchDetails, branchId)
-                    ? branchDetails[branchId]
-                    : undefined
+                const branch: BranchDiagram | undefined = branchDetails[branchId]
+
                 return (
                   <DropdownMenuItem
                     data-branch-id={branchId}
@@ -146,7 +222,8 @@ export function Diagram() {
                       data-testid="dropdown-item-last-generated"
                       className="text-xs text-[color:var(--muted-text)]"
                     >
-                      {branch
+                      {/* 💡 FIX: Check if lastGenerated exists and is not empty */}
+                      {branch?.lastGenerated
                         ? `Last generated ${branch.lastGenerated}`
                         : "Not generated yet"}
                     </span>
