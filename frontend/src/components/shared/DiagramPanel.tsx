@@ -253,7 +253,7 @@ export function DiagramPanel({
                   size="icon"
                   aria-label={`Remove ${branch.label} diagram`}
                   onClick={onRemove}
-                  className="text-[color:var(--muted-text)] hover:text-[color:var(--page-foreground)] -mr-2 sm:hidden"
+                  className="text-[color:var(--muted-text)] hover:text-[color:var(--page-foreground)] sm:hidden"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -264,24 +264,33 @@ export function DiagramPanel({
               {branch.label}
             </p>
 
-            <div className="text-xs text-[color:var(--muted-text)] flex flex-wrap">
-              <span>Last generated {branch.lastGenerated} | Commit </span>
-              <span className="break-all">{branch.commitNumber}</span>
-              <span>: {branch.commitMessage}</span>
+            <div className="text-xs text-[color:var(--muted-text)] flex flex-col gap-1 sm:flex-row sm:flex-wrap">
+              <span>
+                Last generated {branch.lastGenerated} {isDesktop ? "|" : ""}
+              </span>
+              <span className="flex flex-wrap gap-1">
+                <span>Commit</span>
+                <span className="break-all">{branch.commitNumber}:</span>
+              </span>
+              <span className="break-words">{branch.commitMessage}</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-auto">
+          <div className="flex w-full flex-col items-stretch gap-2 self-start sm:w-auto sm:flex-row sm:items-center sm:self-auto">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <div className="flex flex-row items-center gap-2 sm:flex-col sm:items-end sm:gap-1">
+                <div
+                  className={`flex w-full gap-2 sm:w-auto sm:gap-1 ${
+                    isDesktop ? "flex-row items-center" : "flex-col items-start"
+                  }`}
+                >
                   <p className="text-[color:var(--muted-text)] text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap">
                     Switch branch
                   </p>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-full border-[color:var(--panel-border)] bg-[color:var(--panel-bg)] text-xs font-semibold w-40 justify-between"
+                    className="rounded-full border-[color:var(--panel-border)] bg-[color:var(--panel-bg)] text-xs font-semibold w-full sm:w-40 justify-between min-w-0"
                   >
                     <span className="truncate min-w-0 flex-1 text-left">
                       {branch.label}

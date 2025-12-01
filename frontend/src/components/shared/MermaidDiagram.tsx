@@ -127,7 +127,7 @@ export function MermaidDiagram({ definition, className, style }: MermaidDiagramP
       ref={containerRef}
       style={style}
       className={cn(
-        "mermaid-diagram rounded-2xl border border-[color:var(--panel-border)] bg-white/90 p-3 shadow-inner [&_svg]:mx-auto [&_svg]:h-full [&_svg]:w-full [&_svg]:max-w-none",
+        "mermaid-diagram rounded-2xl border border-[color:var(--panel-border)] bg-white/90 p-3 shadow-inner overflow-hidden min-w-0 [&_svg]:mx-auto [&_svg]:h-auto [&_svg]:w-full [&_svg]:max-w-full",
         className,
       )}
       aria-live="polite"
