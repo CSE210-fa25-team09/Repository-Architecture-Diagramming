@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useId, useState } from "react"
+import { type CSSProperties, useEffect, useId, useRef, useState } from "react"
 import mermaid from "mermaid"
 
 import { cn } from "@/lib/utils"
@@ -70,8 +70,9 @@ function ensureMermaidIsReady() {
 }
 
 export function MermaidDiagram({ definition, className, style }: MermaidDiagramProps) {
-  const [svgMarkup, setSvgMarkup] = useState("")
   const [error, setError] = useState<string | null>(null)
+  // Use a ref to access the DOM element directly
+  const containerRef = useRef<HTMLDivElement>(null)
   const renderId = useId()
 
   useEffect(() => {
@@ -80,9 +81,15 @@ export function MermaidDiagram({ definition, className, style }: MermaidDiagramP
 
     async function renderDiagram() {
       try {
-        const { svg } = await mermaid.render(`mermaid-diagram-${renderId}`, definition)
-        if (isMounted) {
-          setSvgMarkup(svg)
+        // Clean the ID to ensure it is a valid selector for Mermaid
+        const validId = `mermaid-diagram-${renderId.replace(/:/g, "")}`
+
+        // Render returns the SVG string
+        const { svg } = await mermaid.render(validId, definition)
+
+        // Inject HTML directly into the ref if the component is still mounted
+        if (isMounted && containerRef.current) {
+          containerRef.current.innerHTML = svg
           setError(null)
         }
       } catch (err) {
@@ -112,13 +119,13 @@ export function MermaidDiagram({ definition, className, style }: MermaidDiagramP
 
   return (
     <div
+      ref={containerRef}
       style={style}
       className={cn(
         "mermaid-diagram rounded-2xl border border-[color:var(--panel-border)] bg-white/90 p-3 shadow-inner [&_svg]:mx-auto [&_svg]:h-full [&_svg]:w-full [&_svg]:max-w-none",
         className,
       )}
       aria-live="polite"
-      dangerouslySetInnerHTML={{ __html: svgMarkup }}
     />
   )
 }
