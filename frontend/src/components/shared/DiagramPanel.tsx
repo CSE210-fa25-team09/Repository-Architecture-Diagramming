@@ -112,14 +112,16 @@ export function DiagramPanel({
   const hasDiagram = Boolean(diagramDefinition?.trim())
   const handleExportDiagram = async () => {
     if (!diagramRef.current) return
+    const svgNode = diagramRef.current.querySelector("svg")
     try {
       setIsDiagramExporting(true)
-      const computedStyles = getComputedStyle(diagramRef.current)
+      const target = (svgNode as HTMLElement | null) ?? diagramRef.current
+      const computedStyles = getComputedStyle(target)
       const backgroundColor =
         computedStyles.backgroundColor ||
         computedStyles.getPropertyValue("--panel-bg") ||
         "#ffffff"
-      const url = await toPng(diagramRef.current, {
+      const url = await toPng(target, {
         cacheBust: true,
         backgroundColor,
         pixelRatio: 2.5,
@@ -231,7 +233,7 @@ export function DiagramPanel({
           size="sm"
           className="text-[color:var(--muted-text)] hover:text-[color:var(--page-foreground)] ml-auto flex-shrink-0"
           onClick={handleExportDiagram}
-          disabled={isDiagramExporting}
+          disabled={isDiagramExporting || branch.diagramLoading || !hasDiagram}
         >
           <span className="hidden md:inline">Export as Image</span>
           <Download className="h-4 w-4 md:ml-2" />
