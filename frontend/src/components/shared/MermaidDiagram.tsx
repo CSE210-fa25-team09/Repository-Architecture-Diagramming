@@ -15,7 +15,7 @@ function ensureMermaidIsReady() {
   if (mermaidHasInitialized) return
   mermaid.initialize({
     startOnLoad: false,
-    securityLevel: "loose",
+    securityLevel: "strict",
     theme: "base",
     fontFamily: "Inter, 'Segoe UI', system-ui, sans-serif",
     themeVariables: {
@@ -87,11 +87,16 @@ export function MermaidDiagram({ definition, className, style }: MermaidDiagramP
         // Render returns the SVG string
         const { svg } = await mermaid.render(validId, definition)
 
-        // Inject HTML directly into the ref if the component is still mounted
-        if (isMounted && containerRef.current) {
-          containerRef.current.innerHTML = svg
-          setError(null)
-        }
+        if (!isMounted || !containerRef.current) return
+
+        // Parse the SVG string to avoid writing raw HTML and reduce XSS risk
+        const parser = new DOMParser()
+        const parsed = parser.parseFromString(svg, "image/svg+xml")
+        const svgElement = parsed.documentElement.cloneNode(true) as Element
+
+        const container = containerRef.current
+        container.replaceChildren(svgElement)
+        setError(null)
       } catch (err) {
         console.error("Failed to render Mermaid diagram", err)
         if (isMounted) setError("Unable to render diagram.")
