@@ -293,25 +293,23 @@ export function DiagramPanel({
               <DropdownMenuContent align="end" className="min-w-[14rem]">
                 {branches.map((branchId) => {
                   const option = branchDetails[branchId]
-                  if (!option) return null
-
-                  const isCurrentBranch = option.id === branch.id
-                  const isSwap =
-                    usedBranchIds.has(option.id as BranchId) && !isCurrentBranch
+                  const optionId = (option?.id ?? branchId) as BranchId
+                  const isCurrentBranch = branchId === branch.id
+                  const isSwap = usedBranchIds.has(optionId) && !isCurrentBranch
                   return (
                     <DropdownMenuItem
-                      key={option.id}
-                      onSelect={() => onSwitchBranch(option.id as BranchId)}
+                      key={optionId}
+                      onSelect={() => onSwitchBranch(branchId as BranchId)}
                       disabled={isCurrentBranch}
                       className="flex flex-col items-start gap-0.5"
                     >
                       <span className="text-sm font-medium flex items-center gap-2">
-                        {option.label}
+                        {option?.label ?? branchId}
                         {/* Optional: Add a visual indicator if it is a swap action */}
                       </span>
                       {isSwap}
                       <span className="text-xs text-[color:var(--muted-text)]">
-                        {option.lastGenerated
+                        {option?.lastGenerated
                           ? `Last generated ${option.lastGenerated}`
                           : "Not generated yet"}
                       </span>

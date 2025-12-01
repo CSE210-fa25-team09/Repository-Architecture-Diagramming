@@ -46,7 +46,9 @@ export function Diagram() {
   const [repoName, _setRepoName] = useState(REPOSITORY_NAME)
   const [repoSummary, _setRepoSummary] = useState(WORKSPACE_SUMMARY)
   const [branches, _setBranches] = useState<string[]>(BRANCH_LIST)
-  const [branchDetails, setBranchDetails] = useState<BranchLibrary>(BRANCH_LIBRARY)
+  const [branchDetails, setBranchDetails] = useState<BranchLibrary>({
+    main: BRANCH_LIBRARY["main"],
+  })
   const [panels, setPanels] = useState<DiagramPanelState[]>(DEFAULT_DIAGRAMS)
 
   const handleAddPanel = (branchId: string) => {
@@ -58,10 +60,8 @@ export function Diagram() {
         : [...prev, { id: newId, branchId }],
     )
     setBranchDetails((prev) => {
-      if (Object.prototype.hasOwnProperty.call(prev, branchId)) return prev
-      if (!Object.prototype.hasOwnProperty.call(BRANCH_LIBRARY, branchId)) return prev
-      const branchData = BRANCH_LIBRARY[branchId]
-      if (!branchData) return prev
+      const branchData = BRANCH_LIBRARY[branchId as BranchId]
+      if (!branchData || prev[branchId]) return prev
       return { ...prev, [branchId]: branchData }
     })
   }
@@ -71,6 +71,12 @@ export function Diagram() {
   }
 
   const handleSwitchBranch = (diagramId: string, branchId: BranchId) => {
+    setBranchDetails((prev) => {
+      const branchData = BRANCH_LIBRARY[branchId]
+      if (!branchData || prev[branchId]) return prev
+      return { ...prev, [branchId]: branchData }
+    })
+
     setPanels((prevPanels) => {
       const currentPanel = prevPanels.find((p) => p.id === diagramId)
       if (!currentPanel) return prevPanels
@@ -137,7 +143,8 @@ export function Diagram() {
 
         <div className="space-y-6 px-6 pb-10 sm:px-8">
           {panels.map((panel) => {
-            const branch = branchDetails[panel.branchId]
+            const branch = branchDetails[panel.branchId] ?? BRANCH_LIBRARY[panel.branchId]
+            if (!branch) return null
 
             return (
               <DiagramPanel
@@ -174,10 +181,8 @@ export function Diagram() {
               className="min-w-[16rem] max-w-[calc(100vw-2rem)] sm:max-w-none"
             >
               {unusedBranches.map((branchId) => {
-                const branch: BranchDiagram | undefined =
-                  Object.prototype.hasOwnProperty.call(branchDetails, branchId)
-                    ? branchDetails[branchId]
-                    : undefined
+                const branch: BranchDiagram | undefined = branchDetails[branchId]
+
                 return (
                   <DropdownMenuItem
                     data-branch-id={branchId}
