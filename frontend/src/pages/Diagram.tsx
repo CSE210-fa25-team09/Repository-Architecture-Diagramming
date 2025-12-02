@@ -195,7 +195,7 @@ export function Diagram() {
       const loadTree = async () => {
         try {
           const treeResp = await fetchRepoTree(branchId)
-          const formattedTree = repoTreeToAscii(treeResp.tree, repoName ?? branchId)
+          const formattedTree = repoTreeToAscii([treeResp.tree], repoName ?? branchId)
           setBranchDetails((prev) => {
             const existing = prev[branchId]
             if (!existing) return prev
