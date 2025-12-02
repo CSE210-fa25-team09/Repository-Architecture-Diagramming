@@ -170,9 +170,6 @@ export function Diagram() {
                 diagramError: undefined,
               },
             }
-            if (repoKey) {
-              setBranchCacheForRepo(repoKey, updated)
-            }
             return updated
           })
         } catch (err) {
@@ -195,16 +192,13 @@ export function Diagram() {
       const loadTree = async () => {
         try {
           const treeResp = await fetchRepoTree(branchId)
-          const formattedTree = repoTreeToAscii([treeResp.tree], repoName ?? branchId)
+          const formattedTree = repoTreeToAscii(treeResp.tree, repoName ?? branchId)
           setBranchDetails((prev) => {
             const existing = prev[branchId]
             if (!existing) return prev
             const updated: BranchLibrary = {
               ...prev,
               [branchId]: { ...existing, fileTree: formattedTree, treeLoading: false },
-            }
-            if (repoKey) {
-              setBranchCacheForRepo(repoKey, updated)
             }
             return updated
           })
@@ -306,6 +300,12 @@ export function Diagram() {
       }
     })
   }, [panels, ensureBranchData, branchDetails, repoKey, workspace, branchCacheMap])
+
+  useEffect(() => {
+    if (!repoKey || !workspace) return
+    if (!Object.keys(branchDetails).length) return
+    setBranchCacheForRepo(repoKey, branchDetails)
+  }, [branchDetails, repoKey, setBranchCacheForRepo, workspace])
 
   return (
     <main className="flex flex-1 flex-col gap-10 px-4 pb-12 sm:px-0">

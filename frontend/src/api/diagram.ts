@@ -32,7 +32,7 @@ export type RepoTreeNode = {
 
 export type BranchFileTreeResponse = {
   branchId: string
-  tree: RepoTreeNode
+  tree: RepoTreeNode[]
 }
 
 // For /api/architecture
@@ -58,6 +58,13 @@ export type ArchitectureDiagramResponse = {
 
 let cachedWorkspace: WorkspaceResponse | null = null
 let cachedRepoCoords: { owner: string; repo: string } | null = null
+
+const API_BASE_URL = "https://repository-architecture-diagramming.onrender.com"
+
+function withApiBase(path: string) {
+  if (!API_BASE_URL) return path
+  return `${API_BASE_URL}${path}`
+}
 
 function parseRepositoryIdentifier(identifier: string): {
   owner: string
@@ -116,7 +123,7 @@ export async function fetchInitialWorkspace(
   const url = `/api/branches?owner=${encodeURIComponent(
     owner,
   )}&repo=${encodeURIComponent(repo)}`
-  const resp = await fetch(url)
+  const resp = await fetch(withApiBase(url))
 
   if (!resp.ok) {
     throw new Error(`Failed to fetch branches: ${resp.status} ${resp.statusText}`)
@@ -167,7 +174,7 @@ export async function fetchBranchDiagram(
   const url = `/api/analyzeRepo?owner=${encodeURIComponent(
     owner,
   )}&repo=${encodeURIComponent(repo)}&branch=${encodeURIComponent(branchId)}`
-  const resp = await fetch(url)
+  const resp = await fetch(withApiBase(url))
 
   if (!resp.ok) {
     throw new Error(`Failed to fetch branch diagram: ${resp.status} ${resp.statusText}`)
@@ -206,9 +213,7 @@ export async function fetchBranchDiagram(
 // - Backend returns { success, tree: RepoTreeNode }.
 // -------------------------------------------------------------
 
-export async function fetchRepoTree(
-  branchId: string,
-): Promise<BranchFileTreeResponse> {
+export async function fetchRepoTree(branchId: string): Promise<BranchFileTreeResponse> {
   if (!cachedRepoCoords) {
     throw new Error("No repository info cached—call fetchInitialWorkspace() first.")
   }
@@ -218,17 +223,15 @@ export async function fetchRepoTree(
   const url = `/api/repoTree?owner=${encodeURIComponent(
     owner,
   )}&repo=${encodeURIComponent(repo)}&branch=${encodeURIComponent(branchId)}`
-  const resp = await fetch(url)
+  const resp = await fetch(withApiBase(url))
 
   if (!resp.ok) {
-    throw new Error(
-      `Failed to fetch branch file tree: ${resp.status} ${resp.statusText}`,
-    )
+    throw new Error(`Failed to fetch branch file tree: ${resp.status} ${resp.statusText}`)
   }
 
   const data: {
     success: boolean
-    tree: RepoTreeNode
+    tree: RepoTreeNode | RepoTreeNode[]
     error?: string
   } = await resp.json()
 
@@ -241,7 +244,7 @@ export async function fetchRepoTree(
 
   return {
     branchId,
-    tree: data.tree,
+    tree: Array.isArray(data.tree) ? data.tree : [data.tree],
   }
 }
 
@@ -261,7 +264,7 @@ export async function fetchArchitectureDiagram(
   const params = new URLSearchParams({ repoUrl })
   if (branch) params.set("branch", branch)
 
-  const resp = await fetch(`/api/architecture?${params.toString()}`)
+  const resp = await fetch(withApiBase(`/api/architecture?${params.toString()}`))
 
   if (!resp.ok) {
     throw new Error(
