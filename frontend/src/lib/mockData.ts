@@ -1,4 +1,4 @@
-import type { BranchLibrary } from "@/pages/Diagram"
+import type { BranchLibrary } from "@/components/shared/DiagramPanel"
 
 export const REPOSITORY_NAME = "inventory-diagramming"
 export const WORKSPACE_SUMMARY = "Track branch-specific repository flows."

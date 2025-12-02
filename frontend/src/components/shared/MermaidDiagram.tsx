@@ -7,6 +7,8 @@ type MermaidDiagramProps = {
   definition: string
   className?: string
   style?: CSSProperties
+  onRender?: (size: { width: number; height: number }) => void
+  minWidth?: number
 }
 
 let mermaidHasInitialized = false
@@ -69,7 +71,13 @@ function ensureMermaidIsReady() {
   mermaidHasInitialized = true
 }
 
-export function MermaidDiagram({ definition, className, style }: MermaidDiagramProps) {
+export function MermaidDiagram({
+  definition,
+  className,
+  style,
+  onRender,
+  minWidth,
+}: MermaidDiagramProps) {
   const [error, setError] = useState<string | null>(null)
   // Use a ref to access the DOM element directly
   const containerRef = useRef<HTMLDivElement>(null)
@@ -93,10 +101,26 @@ export function MermaidDiagram({ definition, className, style }: MermaidDiagramP
         const parser = new DOMParser()
         const parsed = parser.parseFromString(svg, "image/svg+xml")
         const svgElement = parsed.documentElement.cloneNode(true) as Element
+        svgElement.setAttribute("width", "100%")
+        svgElement.setAttribute("height", "auto")
+        svgElement.setAttribute("preserveAspectRatio", "xMinYMin meet")
+        if (minWidth) {
+          svgElement.setAttribute("min-width", `${minWidth}px`)
+          svgElement.setAttribute("style", `min-width:${minWidth}px;`)
+        }
 
         const container = containerRef.current
         container.replaceChildren(svgElement)
         setError(null)
+
+        if (typeof onRender === "function") {
+          requestAnimationFrame(() => {
+            const rect = svgElement.getBoundingClientRect()
+            if (rect.width && rect.height) {
+              onRender({ width: rect.width, height: rect.height })
+            }
+          })
+        }
       } catch (err) {
         console.error("Failed to render Mermaid diagram", err)
         if (isMounted) setError("Unable to render diagram.")
@@ -107,7 +131,7 @@ export function MermaidDiagram({ definition, className, style }: MermaidDiagramP
     return () => {
       isMounted = false
     }
-  }, [definition, renderId])
+  }, [definition, renderId, minWidth, onRender])
 
   if (error) {
     return (
@@ -127,7 +151,7 @@ export function MermaidDiagram({ definition, className, style }: MermaidDiagramP
       ref={containerRef}
       style={style}
       className={cn(
-        "mermaid-diagram rounded-2xl border border-[color:var(--panel-border)] bg-white/90 p-3 shadow-inner [&_svg]:mx-auto [&_svg]:h-full [&_svg]:w-full [&_svg]:max-w-none",
+        "mermaid-diagram rounded-2xl border border-[color:var(--panel-border)] bg-white/90 p-3 shadow-inner [&_svg]:mx-auto [&_svg]:h-auto [&_svg]:w-full [&_svg]:max-w-none",
         className,
       )}
       aria-live="polite"

@@ -2,7 +2,14 @@ import { toPng } from "html-to-image"
 import { Button } from "@/components/ui/button"
 import { MermaidDiagram } from "@/components/shared/MermaidDiagram"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { ChevronDown, ChevronLeft, ChevronRight, Download, X } from "lucide-react"
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  X,
+  Loader2,
+} from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -23,16 +30,27 @@ import {
 } from "@/components/ui/resizable"
 
 import { ScrollArea } from "@/components/ui/scroll-area"
-
-import { BRANCH_LIBRARY } from "@/lib/mockData"
 import { useState, useRef, useEffect } from "react"
-
-const PANEL_HEIGHT_PX = 360
+import { Skeleton } from "@/components/ui/skeleton"
 
 // Types needed for this component
-type BranchId = keyof typeof BRANCH_LIBRARY
-type BranchInfo = (typeof BRANCH_LIBRARY)[BranchId]
-type BranchLibrary = Record<string, BranchInfo>
+export type BranchInfo = {
+  id: string
+  label: string
+  lastGenerated: string
+  diagram: string
+  fileTree: string
+  commitMessage: string
+  commitNumber: string
+  dependencyGraph: string
+  diagramLoading?: boolean
+  treeLoading?: boolean
+  diagramError?: string
+  treeError?: string
+}
+
+type BranchId = string
+export type BranchLibrary = Record<string, BranchInfo>
 type DiagramView = "swe" | "dependency"
 
 export type DiagramPanelProps = {
@@ -59,6 +77,8 @@ export function DiagramPanel({
   const [diagramView, setDiagramView] = useState<DiagramView>("swe")
   const diagramRef = useRef<HTMLDivElement>(null)
   const [isDesktop, setIsDesktop] = useState(false)
+  const [inlineDiagramHeight, setInlineDiagramHeight] = useState(360)
+  const [dialogDiagramHeight, setDialogDiagramHeight] = useState(600)
 
   // SSR-Safe Media Query Check
   useEffect(() => {
@@ -89,18 +109,22 @@ export function DiagramPanel({
   // Hardcoded to Dependency Graph
   const diagramLabel = "Dependency Graph"
   const diagramDefinition = branch.dependencyGraph
+  const hasDiagram = Boolean(diagramDefinition?.trim())
   const handleExportDiagram = async () => {
     if (!diagramRef.current) return
+    const svgNode = diagramRef.current.querySelector("svg")
     try {
       setIsDiagramExporting(true)
-      const computedStyles = getComputedStyle(diagramRef.current)
+      const target = (svgNode as HTMLElement | null) ?? diagramRef.current
+      const computedStyles = getComputedStyle(target)
       const backgroundColor =
         computedStyles.backgroundColor ||
         computedStyles.getPropertyValue("--panel-bg") ||
         "#ffffff"
-      const url = await toPng(diagramRef.current, {
+      const url = await toPng(target, {
         cacheBust: true,
         backgroundColor,
+        pixelRatio: 2.5,
       })
       const link = document.createElement("a")
       link.href = url
@@ -128,16 +152,41 @@ export function DiagramPanel({
         </Button>
       </div>
 
-      <div className="rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--input-bg)] px-4 py-3">
-        <ScrollArea
-          style={{ height: isDesktop ? PANEL_HEIGHT_PX : 300 }}
-          className="w-full"
-        >
-          <pre className="whitespace-pre-wrap text-sm leading-6 text-[color:var(--page-foreground)]">
-            {branch.fileTree}
-          </pre>
-        </ScrollArea>
-      </div>
+      {branch.treeError || branch.treeLoading ? (
+        <div className="rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--input-bg)] px-4 py-3">
+          <div className="relative flex flex-col items-center justify-center">
+            <Skeleton
+              className="w-full rounded-lg"
+              style={{
+                height: isDesktop ? Math.max(inlineDiagramHeight + 20, 300) : 300,
+              }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              {branch.treeError ? (
+                <div className="flex items-center gap-2 rounded-full bg-[color:var(--panel-bg)]/80 px-3 py-2 text-sm text-destructive shadow-sm text-center">
+                  {branch.treeError}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 rounded-full bg-[color:var(--panel-bg)]/80 px-3 py-2 text-sm text-[color:var(--muted-text)] shadow-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating file tree...
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--input-bg)] px-4 py-3">
+          <ScrollArea
+            style={{ height: isDesktop ? Math.max(inlineDiagramHeight + 20, 300) : 300 }}
+            className="w-full"
+          >
+            <pre className="whitespace-pre-wrap text-sm leading-6 text-[color:var(--page-foreground)]">
+              {branch.fileTree}
+            </pre>
+          </ScrollArea>
+        </div>
+      )}
     </div>
   )
 
@@ -184,7 +233,7 @@ export function DiagramPanel({
           size="sm"
           className="text-[color:var(--muted-text)] hover:text-[color:var(--page-foreground)] ml-auto flex-shrink-0"
           onClick={handleExportDiagram}
-          disabled={isDiagramExporting}
+          disabled={isDiagramExporting || branch.diagramLoading || !hasDiagram}
         >
           <span className="hidden md:inline">Export as Image</span>
           <Download className="h-4 w-4 md:ml-2" />
@@ -192,44 +241,91 @@ export function DiagramPanel({
       </div>
 
       <div className="overflow-hidden">
-        <Dialog>
-          <DialogTrigger asChild>
-            <button
-              type="button"
-              className="w-full rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)] p-4 text-left outline-none transition hover:border-[color:var(--primary-action)] focus-visible:ring-2 focus-visible:ring-[color:var(--primary-action)]"
-              aria-label={`Open enlarged ${diagramLabel.toLowerCase()} for ${branch.label}`}
-            >
-              <div ref={diagramRef} className="w-full">
-                <MermaidDiagram
-                  definition={diagramDefinition}
-                  style={{ height: PANEL_HEIGHT_PX, width: "100%" }}
+        <div className="relative">
+          {(branch.diagramLoading || branch.diagramError) && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)]/80 backdrop-blur-sm">
+              <div className="relative w-full">
+                <Skeleton
+                  className="w-full rounded-xl"
+                  style={{ height: inlineDiagramHeight + 20 }}
                 />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  {branch.diagramError ? (
+                    <div className="flex items-center gap-2 rounded-full bg-[color:var(--panel-bg)]/80 px-3 py-2 text-sm text-destructive shadow-sm text-center">
+                      {branch.diagramError}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 rounded-full bg-[color:var(--panel-bg)]/80 px-3 py-2 text-sm text-[color:var(--muted-text)] shadow-sm">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Generating diagram...
+                    </div>
+                  )}
+                </div>
               </div>
-            </button>
-          </DialogTrigger>
-          <DialogContent className="h-[90vh] w-[95vw] max-w-6xl border border-[color:var(--panel-border)] bg-[color:var(--panel-bg)] text-[color:var(--page-foreground)]">
-            <DialogHeader>
-              <DialogTitle className="text-xl">
-                {branch.label} branch {diagramLabel.toLowerCase()}
-              </DialogTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-[color:var(--muted-text)] hover:text-[color:var(--page-foreground)]"
-                onClick={handleExportDiagram}
-              >
-                Export as Image
-                <Download className="ml-2 h-4 w-4" />
-              </Button>
-            </DialogHeader>
-            <div className="h-full w-full overflow-auto rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)] p-4">
-              <MermaidDiagram
-                definition={diagramDefinition}
-                style={{ height: PANEL_HEIGHT_PX + 180 }}
-              />
             </div>
-          </DialogContent>
-        </Dialog>
+          )}
+          <Dialog>
+            <DialogTrigger asChild>
+              <button
+                type="button"
+                className="w-full rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)] p-4 text-left outline-none transition hover:border-[color:var(--primary-action)] focus-visible:ring-2 focus-visible:ring-[color:var(--primary-action)]"
+                aria-label={`Open enlarged ${diagramLabel.toLowerCase()} for ${branch.label}`}
+                disabled={branch.diagramLoading || !hasDiagram}
+              >
+                <div ref={diagramRef} className="w-full">
+                  {hasDiagram ? (
+                    <MermaidDiagram
+                      definition={diagramDefinition}
+                      onRender={(size) =>
+                        setInlineDiagramHeight(Math.max(360, Math.ceil(size.height)))
+                      }
+                      style={{ height: inlineDiagramHeight + 20, width: "100%" }}
+                    />
+                  ) : (
+                    <Skeleton
+                      className="w-full rounded-xl"
+                      style={{ height: inlineDiagramHeight + 20 }}
+                    />
+                  )}
+                </div>
+              </button>
+            </DialogTrigger>
+            <DialogContent className="h-[90vh] w-[95vw] max-w-[1100px] sm:max-w-[1200px] border border-[color:var(--panel-border)] bg-[color:var(--panel-bg)] text-[color:var(--page-foreground)]">
+              <DialogHeader>
+                <DialogTitle className="text-xl">
+                  {branch.label} branch {diagramLabel.toLowerCase()}
+                </DialogTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-[color:var(--muted-text)] hover:text-[color:var(--page-foreground)]"
+                  onClick={handleExportDiagram}
+                  disabled={branch.diagramLoading || !hasDiagram}
+                >
+                  Export as Image
+                  <Download className="ml-2 h-4 w-4" />
+                </Button>
+              </DialogHeader>
+              <div className="h-full w-full overflow-auto rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)] p-4">
+                {hasDiagram ? (
+                  <MermaidDiagram
+                    definition={diagramDefinition}
+                    onRender={(size) => {
+                      const measured = Math.ceil(size.height)
+                      setDialogDiagramHeight((prev) => Math.max(600, prev, measured))
+                    }}
+                    style={{ height: dialogDiagramHeight + 20, width: "100%" }}
+                  />
+                ) : (
+                  <Skeleton
+                    className="w-full rounded-xl"
+                    style={{ height: Math.max(dialogDiagramHeight + 20, 600) }}
+                  />
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
       <p className="px-1 text-xs text-[color:var(--muted-text)]">
         Click the diagram to open a larger preview.
@@ -264,16 +360,23 @@ export function DiagramPanel({
               {branch.label}
             </p>
 
-            <div className="text-xs text-[color:var(--muted-text)] flex flex-col gap-1 sm:flex-row sm:flex-wrap">
-              <span>
-                Last generated {branch.lastGenerated} {isDesktop ? "|" : ""}
-              </span>
-              <span className="flex flex-wrap gap-1">
-                <span>Commit</span>
-                <span className="break-all">{branch.commitNumber}:</span>
-              </span>
-              <span className="break-words">{branch.commitMessage}</span>
-            </div>
+            {branch.diagramLoading ? (
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-3 w-40" />
+                <Skeleton className="h-3 w-56" />
+              </div>
+            ) : (
+              <div className="text-xs text-[color:var(--muted-text)] flex flex-col gap-1 sm:flex-row sm:flex-wrap">
+                <span>
+                  Last generated {branch.lastGenerated} {isDesktop ? "|" : ""}
+                </span>
+                <span className="flex flex-wrap gap-1">
+                  <span>Commit</span>
+                  <span className="break-all">{branch.commitNumber}:</span>
+                </span>
+                <span className="break-words">{branch.commitMessage}</span>
+              </div>
+            )}
           </div>
 
           <div className="flex w-full flex-col items-stretch gap-2 self-start sm:w-auto sm:flex-row sm:items-center sm:self-auto">
@@ -284,7 +387,7 @@ export function DiagramPanel({
                     isDesktop ? "flex-row items-center" : "flex-col items-start"
                   }`}
                 >
-                  <p className="text-[color:var(--muted-text)] text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap">
+                  <p className="text-[color:var(--muted-text)] text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap px-2">
                     Switch branch
                   </p>
                   <Button
