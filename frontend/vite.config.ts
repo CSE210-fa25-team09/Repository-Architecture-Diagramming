@@ -15,8 +15,9 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://localhost:3000",
+        target: "https://repository-architecture-diagramming.onrender.com",
         changeOrigin: true,
+        secure: true,
       },
     },
   },
