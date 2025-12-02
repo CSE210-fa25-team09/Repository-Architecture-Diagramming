@@ -101,15 +101,14 @@ export function DiagramPanel({
       media.removeEventListener("change", listener)
     }
   }, [])
-  /** 
+
   const diagramLabel = diagramView === "swe" ? "SWE Diagram" : "Dependency Graph"
   const diagramDefinition =
     diagramView === "swe" ? branch.diagram : branch.dependencyGraph
-  */
   // Hardcoded to Dependency Graph
-  const diagramLabel = "Dependency Graph"
-  const diagramDefinition = branch.dependencyGraph
+
   const hasDiagram = Boolean(diagramDefinition?.trim())
+
   const handleExportDiagram = async () => {
     if (!diagramRef.current) return
     const svgNode = diagramRef.current.querySelector("svg")
