@@ -21,15 +21,13 @@ function createArchitectureService({ metadataService = repoMetadataService, llm 
       branch
     });
 
-    const cacheKey = `diagram:${metadata.owner}:${metadata.repo}:${metadata.branch}:${metadata.latestCommit.sha || 'latest'}`;
+    const commitSha = metadata.latestCommit.sha || 'latest';
+    const cacheKey = cache.buildArchitectureKey(metadata.owner, metadata.repo, metadata.branch, commitSha);
     
     const cachedResult = cache.get(cacheKey);
     if (cachedResult) {
-      console.log(`[Cache Hit] Serving diagram for ${cacheKey}`);
       return cachedResult;
     }
-
-    // console.log(`Cache Miss ${cacheKey}`);
 
     const llmResult = await llm.generateArchitectureDiagram(metadata);
 
@@ -47,7 +45,7 @@ function createArchitectureService({ metadataService = repoMetadataService, llm 
       systemPrompt: llmResult.systemPrompt
     };
 
-    // Store in Cache
+    // Store in Cache with cached flag set to true
     const resultToCache = {
       ...result,
       metadata: {
