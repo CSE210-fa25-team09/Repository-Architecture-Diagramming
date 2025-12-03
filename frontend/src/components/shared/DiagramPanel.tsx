@@ -106,7 +106,6 @@ export function DiagramPanel({
     }
   }, [])
 
-
   const diagramLabel =
     diagramView === "internalDependency"
       ? "Internal Dependency Graph"

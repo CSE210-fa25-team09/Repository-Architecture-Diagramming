@@ -139,18 +139,17 @@ describe("Diagram", () => {
     })
   })
 
-  it("renders the key layout elements when viewed on a mobile viewport", () => {
+  it("renders the key layout elements when viewed on a mobile viewport", async () => {
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 360 })
 
     renderDiagram()
 
     expect(screen.getByTestId("repo-name")).toBeVisible()
     expect(screen.getByTestId("repo-summary")).toBeVisible()
+    const addButton = screen.getByRole("button", { name: /branches/i })
+    expect(addButton).toBeVisible()
     expect(
-      screen.getByRole("button", { name: /add a new diagram for a branch/i }),
-    ).toBeVisible()
-    expect(
-      screen.getByText(/pick a branch to generate a new diagram workspace card/i),
+      await screen.findByText(/pick a branch to generate a new diagram workspace card/i),
     ).toBeVisible()
   })
 
