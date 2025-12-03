@@ -6,7 +6,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-import { BRANCH_LIST, REPOSITORY_NAME, WORKSPACE_SUMMARY } from "@/lib/mockData"
 import { GithubIcon, Plus } from "lucide-react"
 import { useLocation } from "react-router-dom"
 import { useMemo, useState, useEffect, useCallback } from "react"
@@ -17,7 +16,12 @@ import {
   type BranchInfo,
   type BranchLibrary,
 } from "@/components/shared/DiagramPanel"
-import { fetchBranchDiagram, fetchRepoTree, fetchInitialWorkspace } from "@/api/diagram"
+import {
+  fetchArchitectureDiagram,
+  fetchBranchDiagram,
+  fetchRepoTree,
+  fetchInitialWorkspace,
+} from "@/api/diagram"
 import { formatLastGenerated, repoTreeToAscii } from "@/lib/utils"
 import { NotFound } from "@/pages/NotFound"
 
@@ -39,20 +43,24 @@ export function Diagram() {
     [location.search],
   )
 
-  const [repoName, setRepoName] = useState(workspace?.repo?.name ?? REPOSITORY_NAME)
-  const [repoSummary, setRepoSummary] = useState(
-    workspace?.repo?.description ?? WORKSPACE_SUMMARY,
-  )
+  const [repoName, setRepoName] = useState(workspace?.repo?.name ?? "")
+  const [repoSummary, setRepoSummary] = useState(workspace?.repo?.description ?? "")
+  const repoUrl = useMemo(() => {
+    const decoded = decodeURIComponent(repoParam || "")
+    if (decoded.startsWith("http")) return decoded
+    const baseName = repoName || decoded
+    return baseName ? `https://github.com/${baseName}` : ""
+  }, [repoParam, repoName])
 
   useEffect(() => {
     if (workspace?.repo) {
       setRepoName(workspace.repo.name)
-      setRepoSummary(workspace.repo.description ?? WORKSPACE_SUMMARY)
+      setRepoSummary(workspace.repo.description ?? "")
     }
   }, [workspace])
 
   const [branches, setBranches] = useState<string[]>(
-    workspace?.branches?.map((b) => b.name) ?? BRANCH_LIST,
+    workspace?.branches?.map((b) => b.name) ?? [],
   )
 
   const [branchDetails, setBranchDetails] = useState<BranchLibrary>({} as BranchLibrary)
@@ -83,7 +91,7 @@ export function Diagram() {
         setCurrentRepoKey(ws.repo.name)
         setWorkspaceForRepo(ws.repo.name, ws)
         setRepoName(ws.repo.name)
-        setRepoSummary(ws.repo.description ?? WORKSPACE_SUMMARY)
+        setRepoSummary(ws.repo.description ?? "")
         setBranches(ws.branches.map((b) => b.name))
         setBranchDetails({} as BranchLibrary)
       } catch (err) {
@@ -98,44 +106,90 @@ export function Diagram() {
 
   const ensureBranchData = useCallback(
     async (branchId: string) => {
-      if (!repoKey || !workspace) return
+      if (!repoKey || !workspace || !repoUrl) return
       const existingCached = branchDetails[branchId]
 
       if (
         existingCached &&
         !existingCached.diagramLoading &&
         !existingCached.treeLoading &&
-        existingCached.diagram &&
-        existingCached.fileTree
+        !existingCached.llmLoading &&
+        existingCached.internalDependencyGraph &&
+        existingCached.fileTree &&
+        existingCached.llmGraph
       ) {
         return
       }
 
       setBranchDetails((prev) => {
         const existing = prev[branchId]
-        if (existing?.diagramLoading || existing?.treeLoading) return prev
+        if (existing?.diagramLoading || existing?.treeLoading || existing?.llmLoading)
+          return prev
         const fallback: BranchInfo = existing ?? {
           id: branchId,
           label: branchId,
           lastGenerated: "",
-          diagram: "",
+          internalDependencyGraph: "",
           fileTree: "",
           commitMessage: "",
           commitNumber: "",
           dependencyGraph: "",
+          llmGraph: "",
           diagramError: undefined,
           treeError: undefined,
+          llmError: undefined,
+          llmLoading: false,
         }
         return {
           ...prev,
-          [branchId]: { ...fallback, diagramLoading: true, treeLoading: true },
+          [branchId]: {
+            ...fallback,
+            diagramLoading: true,
+            treeLoading: true,
+            llmLoading: true,
+          },
         }
       })
+
+      let commitCaptured =
+        Boolean(existingCached?.commitNumber) || Boolean(existingCached?.lastGenerated)
+
+      const maybeApplyCommitInfo = ({
+        commitMessage,
+        commitNumber,
+        commitTimestamp,
+      }: {
+        commitMessage?: string
+        commitNumber?: string
+        commitTimestamp?: number
+      }) => {
+        if (commitCaptured) return
+        if (!commitMessage && !commitNumber && !commitTimestamp) return
+        const formattedTimestamp = formatLastGenerated(commitTimestamp)
+        commitCaptured = true
+        setBranchDetails((prev) => {
+          const existing = prev[branchId]
+          if (!existing) return prev
+          return {
+            ...prev,
+            [branchId]: {
+              ...existing,
+              commitMessage: commitMessage ?? existing.commitMessage,
+              commitNumber: commitNumber ?? existing.commitNumber,
+              lastGenerated: formattedTimestamp || existing.lastGenerated || "Just now",
+            },
+          }
+        })
+      }
 
       const loadDiagram = async () => {
         try {
           const diagramResp = await fetchBranchDiagram(branchId)
-          const formattedTimestamp = formatLastGenerated(diagramResp.timestamp)
+          maybeApplyCommitInfo({
+            commitMessage: diagramResp.commitMessage,
+            commitNumber: diagramResp.commitId,
+            commitTimestamp: diagramResp.timestamp,
+          })
           setBranchDetails((prev) => {
             const existing = prev[branchId]
             if (!existing) return prev
@@ -143,10 +197,7 @@ export function Diagram() {
               ...prev,
               [branchId]: {
                 ...existing,
-                lastGenerated: formattedTimestamp || "Just now",
-                diagram: diagramResp.internalDependencies,
-                commitMessage: diagramResp.commitMessage,
-                commitNumber: diagramResp.commitId,
+                internalDependencyGraph: diagramResp.internalDependencies,
                 dependencyGraph: diagramResp.allDependencies,
                 diagramLoading: false,
                 diagramError: undefined,
@@ -166,6 +217,50 @@ export function Diagram() {
             return {
               ...prev,
               [branchId]: { ...existing, diagramLoading: false, diagramError: message },
+            }
+          })
+        }
+      }
+
+      const loadLlmDiagram = async () => {
+        try {
+          const archResp = await fetchArchitectureDiagram(repoUrl, branchId)
+          const latestCommit = archResp.metadata?.latestCommit as
+            | { sha?: string; message?: string; date?: string }
+            | undefined
+          const commitTimestamp = latestCommit?.date
+            ? Math.floor(new Date(latestCommit.date).getTime() / 1000)
+            : undefined
+          maybeApplyCommitInfo({
+            commitMessage: latestCommit?.message,
+            commitNumber: latestCommit?.sha,
+            commitTimestamp,
+          })
+          setBranchDetails((prev) => {
+            const existing = prev[branchId]
+            if (!existing) return prev
+            return {
+              ...prev,
+              [branchId]: {
+                ...existing,
+                llmGraph: archResp.diagram,
+                llmLoading: false,
+                llmError: undefined,
+              },
+            }
+          })
+        } catch (err) {
+          console.error("Failed to load LLM diagram", err)
+          setBranchDetails((prev) => {
+            const existing = prev[branchId]
+            if (!existing) return prev
+            const message =
+              err instanceof Error
+                ? err.message
+                : "Failed to load LLM diagram for this branch."
+            return {
+              ...prev,
+              [branchId]: { ...existing, llmLoading: false, llmError: message },
             }
           })
         }
@@ -202,9 +297,10 @@ export function Diagram() {
       }
 
       void loadDiagram()
+      void loadLlmDiagram()
       void loadTree()
     },
-    [repoName, branchDetails, repoKey, workspace],
+    [repoName, branchDetails, repoKey, workspace, repoUrl],
   )
 
   const handleAddPanel = (branchId: string) => {
@@ -310,13 +406,15 @@ export function Diagram() {
               id: panel.branchId,
               label: panel.branchId,
               lastGenerated: "Loading...",
-              diagram: "",
+              internalDependencyGraph: "",
               fileTree: "",
               commitMessage: "",
               commitNumber: "",
               dependencyGraph: "",
               diagramLoading: true,
               treeLoading: true,
+              llmGraph: "",
+              llmLoading: true,
             }
 
             return (

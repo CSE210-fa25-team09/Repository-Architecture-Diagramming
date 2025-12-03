@@ -1,6 +1,5 @@
 import { toPng } from "html-to-image"
 import { Button } from "@/components/ui/button"
-import { MermaidDiagram } from "@/components/shared/MermaidDiagram"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import {
   ChevronDown,
@@ -33,26 +32,30 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useState, useRef, useEffect } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
+import { MermaidDiagram } from "@/components/shared/MermaidDiagram"
 
 // Types needed for this component
 export type BranchInfo = {
   id: string
   label: string
   lastGenerated: string
-  diagram: string
+  internalDependencyGraph: string
   fileTree: string
   commitMessage: string
   commitNumber: string
   dependencyGraph: string
+  llmGraph: string
   diagramLoading?: boolean
   treeLoading?: boolean
   diagramError?: string
   treeError?: string
+  llmLoading?: boolean
+  llmError?: string
 }
 
 type BranchId = string
 export type BranchLibrary = Record<string, BranchInfo>
-type DiagramView = "swe" | "dependency"
+type DiagramView = "internalDependency" | "externalDependency" | "llmGraph"
 
 export type DiagramPanelProps = {
   branch: BranchInfo
@@ -75,7 +78,7 @@ export function DiagramPanel({
 }: DiagramPanelProps) {
   const [isDiagramExporting, setIsDiagramExporting] = useState(false)
   const [showFileTree, setShowFileTree] = useState(true)
-  const [diagramView, setDiagramView] = useState<DiagramView>("swe")
+  const [diagramView, setDiagramView] = useState<DiagramView>("llmGraph")
   const diagramRef = useRef<HTMLDivElement>(null)
   const [isDesktop, setIsDesktop] = useState(false)
   const [inlineDiagramHeight, setInlineDiagramHeight] = useState(360)
@@ -103,10 +106,31 @@ export function DiagramPanel({
     }
   }, [])
 
-  const diagramLabel = diagramView === "swe" ? "SWE Diagram" : "Dependency Graph"
+
+  const diagramLabel =
+    diagramView === "internalDependency"
+      ? "Internal Dependency Graph"
+      : diagramView === "externalDependency"
+        ? "External Dependency Graph"
+        : "SWE Graph"
   const diagramDefinition =
-    diagramView === "swe" ? branch.diagram : branch.dependencyGraph
+    diagramView === "internalDependency"
+      ? branch.internalDependencyGraph
+      : diagramView === "externalDependency"
+        ? branch.dependencyGraph
+        : branch.llmGraph
+  const activeDiagramLoading =
+    diagramView === "llmGraph" ? branch.llmLoading : branch.diagramLoading
+  const activeDiagramError =
+    diagramView === "llmGraph" ? branch.llmError : branch.diagramError
   // Hardcoded to Dependency Graph
+  const isMetadataLoading = Boolean(branch.diagramLoading && branch.llmLoading)
+  const mermaidKey = `${branch.id}-${diagramView}`
+
+  useEffect(() => {
+    // Reset dialog height when switching diagram types so it can resize to the new content
+    setDialogDiagramHeight(600)
+  }, [diagramView])
 
   const hasDiagram = Boolean(diagramDefinition?.trim())
 
@@ -192,7 +216,7 @@ export function DiagramPanel({
 
   const DiagramComponent = (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center px-1">
+      <div className="flex flex-col gap-2 px-1 sm:flex-row sm:items-center">
         {/* Left Side */}
         <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3 flex-shrink">
           <DropdownMenu>
@@ -206,11 +230,14 @@ export function DiagramPanel({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[12rem]">
-              <DropdownMenuItem onSelect={() => setDiagramView("swe")}>
-                SWE Diagram
+              <DropdownMenuItem onSelect={() => setDiagramView("llmGraph")}>
+                SWE Graph
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setDiagramView("dependency")}>
-                Dependency Graph
+              <DropdownMenuItem onSelect={() => setDiagramView("internalDependency")}>
+                Internal Dependency Graph
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setDiagramView("externalDependency")}>
+                External Dependency Graph
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -231,18 +258,18 @@ export function DiagramPanel({
         <Button
           variant="ghost"
           size="sm"
-          className="text-[color:var(--muted-text)] hover:text-[color:var(--page-foreground)] ml-auto flex-shrink-0"
+          className="text-[color:var(--muted-text)] hover:text-[color:var(--page-foreground)] self-start sm:ml-auto sm:self-center flex-shrink-0"
           onClick={handleExportDiagram}
-          disabled={isDiagramExporting || branch.diagramLoading || !hasDiagram}
+          disabled={isDiagramExporting || activeDiagramLoading || !hasDiagram}
         >
-          <span className="hidden md:inline">Export as Image</span>
+          <span className="md:inline">Export as Image</span>
           <Download className="h-4 w-4 md:ml-2" />
         </Button>
       </div>
 
       <div className="overflow-hidden">
         <div className="relative">
-          {(branch.diagramLoading || branch.diagramError) && (
+          {(activeDiagramLoading || activeDiagramError) && (
             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)]/80 backdrop-blur-sm px-4">
               <div className="relative w-full">
                 <Skeleton
@@ -250,9 +277,9 @@ export function DiagramPanel({
                   style={{ height: inlineDiagramHeight + 20 }}
                 />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  {branch.diagramError ? (
+                  {activeDiagramError ? (
                     <div className="flex items-center gap-2 rounded-full bg-[color:var(--panel-bg)]/80 px-3 py-2 text-sm text-destructive shadow-sm text-center">
-                      {branch.diagramError}
+                      {activeDiagramError}
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 rounded-full bg-[color:var(--panel-bg)]/80 px-3 py-2 text-sm text-[color:var(--muted-text)] shadow-sm">
@@ -270,11 +297,12 @@ export function DiagramPanel({
                 type="button"
                 className="w-full rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)] p-4 text-left outline-none transition hover:border-[color:var(--primary-action)] focus-visible:ring-2 focus-visible:ring-[color:var(--primary-action)]"
                 aria-label={`Open enlarged ${diagramLabel.toLowerCase()} for ${branch.label}`}
-                disabled={branch.diagramLoading || !hasDiagram}
+                disabled={activeDiagramLoading || !hasDiagram}
               >
                 <div ref={diagramRef} className="w-full">
                   {hasDiagram ? (
                     <MermaidDiagram
+                      key={mermaidKey}
                       definition={diagramDefinition}
                       onRender={(size) =>
                         setInlineDiagramHeight(Math.max(360, Math.ceil(size.height)))
@@ -304,7 +332,7 @@ export function DiagramPanel({
                   size="sm"
                   className="text-[color:var(--muted-text)] hover:text-[color:var(--page-foreground)]"
                   onClick={handleExportDiagram}
-                  disabled={branch.diagramLoading || !hasDiagram}
+                  disabled={activeDiagramLoading || !hasDiagram}
                 >
                   Export as Image
                   <Download className="ml-2 h-4 w-4" />
@@ -313,10 +341,11 @@ export function DiagramPanel({
               <div className="h-full w-full overflow-auto rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)] p-4">
                 {hasDiagram ? (
                   <MermaidDiagram
+                    key={`${mermaidKey}-dialog`}
                     definition={diagramDefinition}
                     onRender={(size) => {
                       const measured = Math.ceil(size.height)
-                      setDialogDiagramHeight((prev) => Math.max(600, prev, measured))
+                      setDialogDiagramHeight(Math.max(600, measured))
                     }}
                     style={{ height: dialogDiagramHeight + 20, width: "100%" }}
                   />
@@ -364,7 +393,7 @@ export function DiagramPanel({
               {branch.label}
             </p>
 
-            {branch.diagramLoading ? (
+            {isMetadataLoading ? (
               <div className="flex flex-col gap-2">
                 <Skeleton className="h-3 w-40" />
                 <Skeleton className="h-3 w-56" />

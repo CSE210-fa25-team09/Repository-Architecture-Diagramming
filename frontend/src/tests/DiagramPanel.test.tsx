@@ -125,11 +125,13 @@ const mockBranch: BranchInfo = {
   id: "branch-1",
   label: "feature/login",
   lastGenerated: "2 mins ago",
-  diagram: "graph TD; A-->B;",
+  internalDependencyGraph: "graph TD; A-->B;",
   dependencyGraph: "graph TD; C-->D;",
+  llmGraph: "graph TD; L-->M;",
   fileTree: "src/\n  components/\n    Login.tsx",
   commitMessage: "feat: add login",
   commitNumber: "a1b2c3d",
+  llmLoading: false,
 }
 
 const mockBranchLibrary: BranchLibrary = {
@@ -265,22 +267,27 @@ describe("DiagramPanel", () => {
 
   // Diagram Area
   describe("Diagram Area", () => {
-    it("renders the Mermaid diagram with SWE Diagram by default", () => {
+    it("renders the Mermaid diagram with LLM graph by default", () => {
       setup()
-      expect(screen.getByText(/Mock Diagram:.*graph TD; A-->B;/)).toBeInTheDocument()
-      expect(screen.getByText("SWE Diagram")).toBeInTheDocument()
+      expect(screen.getByText(/Mock Diagram:.*graph TD; L-->M;/)).toBeInTheDocument()
+      expect(screen.getByText("SWE Graph")).toBeInTheDocument()
     })
 
-    it("toggles between SWE Diagram and Dependency Graph", async () => {
+    it("toggles between LLM, Internal, and External Dependency graphs", async () => {
       const { user } = setup()
 
-      const trigger = screen.getByRole("button", { name: "SWE Diagram" })
+      const trigger = screen.getByRole("button", { name: "SWE Graph" })
       // Trigger dropdown
       fireEvent.pointerDown(trigger, { button: 0, pointerType: "mouse" })
 
-      const option = await screen.findByText("Dependency Graph")
-      await user.click(option)
+      const internalOption = await screen.findByText("Internal Dependency Graph")
+      await user.click(internalOption)
+      expect(screen.getByText(/Mock Diagram:.*graph TD; A-->B;/)).toBeInTheDocument()
 
+      // Open again for External graph
+      fireEvent.pointerDown(trigger, { button: 0, pointerType: "mouse" })
+      const externalOption = await screen.findByText("External Dependency Graph")
+      await user.click(externalOption)
       expect(screen.getByText(/Mock Diagram:.*graph TD; C-->D;/)).toBeInTheDocument()
     })
 
@@ -298,12 +305,14 @@ describe("DiagramPanel", () => {
     it("opens dialog when clicking the diagram trigger", async () => {
       const { user } = setup()
       const diagramTrigger = screen.getByLabelText(
-        "Open enlarged swe diagram for feature/login",
+        "Open enlarged swe graph for feature/login",
       )
       await user.click(diagramTrigger)
 
       expect(
-        screen.getByRole("heading", { name: "feature/login branch swe diagram" }),
+        screen.getByRole("heading", {
+          name: "feature/login branch swe graph",
+        }),
       ).toBeInTheDocument()
       const dialogContent = screen.getByRole("dialog")
       expect(within(dialogContent).getByText(/Mock Diagram:/)).toBeInTheDocument()
