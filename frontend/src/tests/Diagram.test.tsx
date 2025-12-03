@@ -54,7 +54,7 @@ describe("Diagram", () => {
     // 2. Click the first item
     const firstTarget = initialMenuItems[0]
 
-    // FIX: Match either "Last generated" OR "Not generated" to handle any mock data state
+    //Match either "Last generated" OR "Not generated" to handle any mock data state
     expect(
       within(firstTarget).getByTestId("dropdown-item-last-generated"),
     ).toHaveTextContent(/Last generated|Not generated/i)
