@@ -7,9 +7,6 @@ node_modules/
 # Logs
 *.log
 
-# Mermaid diagrams (keep Repository-Architecture-Diagramming demo)
-mermaid_diagrams/*
-
 # any DS_Store files
 *.DS_Store
 .DS_Store
