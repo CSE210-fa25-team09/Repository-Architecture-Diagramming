@@ -1,8 +1,7 @@
 import express from 'express';
-import fs from 'fs/promises';
-import path from 'path';
 import graphService from '../services/graphService.js';
 import dependencyService from '../services/dependencyService.js';
+import cacheService from '../services/cacheService.js';
 import dotenv from 'dotenv';
 import githubService from '../services/githubService.js';
 
@@ -10,66 +9,6 @@ dotenv.config();
 
 const maxFiles = process.env.MAX_ANALYZE_FILES ? parseInt(process.env.MAX_ANALYZE_FILES) : 1000;
 const graphRouter = express.Router();
-
-async function checkCache(baseCacheDir, repo, branch, commitSha) {
-  try {
-    const cachePrefix = `${repo}_${branch}_${commitSha}_`;
-    const entries = await fs.readdir(baseCacheDir);
-    const matchingDir = entries
-      .filter(entry => entry.startsWith(cachePrefix))
-      .sort()
-      .pop(); // Get most recent
-    
-    if (matchingDir) {
-      const cachedDir = path.join(baseCacheDir, matchingDir);
-      const cachedTimestamp = parseInt(matchingDir.split('_').pop());
-      const internalPath = path.join(cachedDir, 'internal_dependencies.mmd');
-      const allPath = path.join(cachedDir, 'all_dependencies.mmd');
-      
-      const [internalDependencies, allDependencies] = await Promise.all([
-        fs.readFile(internalPath, 'utf-8'),
-        fs.readFile(allPath, 'utf-8')
-      ]);
-      
-      return {
-        allDependencies,
-        internalDependencies,
-        timestamp: cachedTimestamp
-      };
-    }
-  } catch (err) {
-    console.error(`   Cache check failed: ${err.message}`);
-  }
-  
-  return null;
-}
-
-async function removeOutdatedCache(baseCacheDir, repo, branch, currentCommitSha) {
-  try {
-    const entries = await fs.readdir(baseCacheDir);
-    const outdatedDirs = entries.filter(entry => {
-      // Match pattern: {repo}_{branch}_{oldCommitSha}_{timestamp}
-      if (!entry.startsWith(`${repo}_${branch}_`)) return false;
-      // Extract the commit SHA (third component)
-      const parts = entry.split('_');
-      if (parts.length < 4) return false;
-      const entryCommitSha = parts[2];
-      return entryCommitSha !== currentCommitSha;
-    });
-    
-    for (const dir of outdatedDirs) {
-      const dirPath = path.join(baseCacheDir, dir);
-      await fs.rm(dirPath, { recursive: true, force: true });
-      console.log(`   Deleted outdated cache: ${dir}`);
-    }
-    
-    if (outdatedDirs.length > 0) {
-      console.log(`   Cleaned up ${outdatedDirs.length} outdated cache(s)`);
-    }
-  } catch (cleanupErr) {
-    console.error(`   Warning: Cache cleanup failed - ${cleanupErr.message}`);
-  }
-}
 
 // Endpoint to analyze repository and return diagrams with metadata
 graphRouter.get('/api/analyzeRepo', async (req, res) => {
@@ -83,7 +22,6 @@ graphRouter.get('/api/analyzeRepo', async (req, res) => {
 
   try {
     const queryBranch = branch || await githubService.getDefaultBranch(owner, repo);
-    const baseCacheDir = path.join(process.cwd(), 'mermaid_diagrams');
     
     // Get repository info and latest commit metadata
     const [repoInfo, commitData] = await Promise.all([
@@ -92,10 +30,11 @@ graphRouter.get('/api/analyzeRepo', async (req, res) => {
     ]);
     const commitSha = commitData.sha;
     
-    // Check for cached diagrams
-    const cached = await checkCache(baseCacheDir, repo, queryBranch, commitSha);
+    // Check for cached diagrams using unified cache service
+    const cacheKey = cacheService.buildDependencyKey(owner, repo, queryBranch, commitSha);
+    const cached = cacheService.get(cacheKey);
+    
     if (cached) {
-      console.log(`✅ Retrieved cached diagrams for ${owner}/${repo} (${queryBranch}@${commitSha})\n`);
       return res.json({
         ...cached,
         repoDescription: repoInfo.description,
@@ -103,8 +42,6 @@ graphRouter.get('/api/analyzeRepo', async (req, res) => {
         commitMessage: commitData.message
       });
     }
-    
-    console.log(`Cache miss for ${owner}/${repo} (${queryBranch}@${commitSha})`);
 
     // Analyze dependencies (analyze all files)
     const result = await dependencyService.analyzeDependencies(
@@ -130,23 +67,17 @@ graphRouter.get('/api/analyzeRepo', async (req, res) => {
       { styled: true, showExternal: false, showBuiltin: false }
     );
 
-    // Cache the diagrams
+    // Cache the diagrams using unified cache service
     const timestamp = Math.floor(Date.now() / 1000);
-    const folderName = `${repo}_${queryBranch}_${commitSha}_${timestamp}`;
-    const cacheDir = path.join(baseCacheDir, folderName);
-    const internalPath = path.join(cacheDir, 'internal_dependencies.mmd');
-    const allPath = path.join(cacheDir, 'all_dependencies.mmd');
+    const cacheData = {
+      allDependencies,
+      internalDependencies,
+      timestamp
+    };
     
-    await fs.mkdir(cacheDir, { recursive: true });
-    await Promise.all([
-      fs.writeFile(internalPath, internalDependencies, 'utf-8'),
-      fs.writeFile(allPath, allDependencies, 'utf-8')
-    ]);
+    cacheService.set(cacheKey, cacheData);
 
-    console.log(`✅ Generated and cached diagrams for ${owner}/${repo} (${queryBranch}@${commitSha})`);
-
-    // Remove outdated caches
-    await removeOutdatedCache(baseCacheDir, repo, queryBranch, commitSha);
+    console.log(`✅ Generated diagrams for ${owner}/${repo} (${queryBranch}@${commitSha})`);
 
     res.json({
       allDependencies,
