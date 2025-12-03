@@ -62,7 +62,6 @@ let cachedRepoCoords: { owner: string; repo: string } | null = null
 const API_BASE_URL = "https://repository-architecture-diagramming.onrender.com"
 
 function withApiBase(path: string) {
-  if (!API_BASE_URL) return path
   return `${API_BASE_URL}${path}`
 }
 

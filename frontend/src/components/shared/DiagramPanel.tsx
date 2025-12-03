@@ -244,7 +244,7 @@ export function DiagramPanel({
       <div className="overflow-hidden">
         <div className="relative">
           {(branch.diagramLoading || branch.diagramError) && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)]/80 backdrop-blur-sm">
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)]/80 backdrop-blur-sm px-4">
               <div className="relative w-full">
                 <Skeleton
                   className="w-full rounded-xl"
