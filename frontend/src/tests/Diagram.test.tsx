@@ -10,6 +10,7 @@ import {
 } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
 import { WorkspaceProvider } from "@/lib/workspaceContext"
+import { MemoryRouter } from "react-router-dom"
 
 import { Diagram } from "../pages/Diagram"
 
@@ -24,12 +25,16 @@ describe("Diagram", () => {
     })
   })
 
-  const renderDiagram = () =>
-    render(
-      <WorkspaceProvider>
-        <Diagram />
-      </WorkspaceProvider>,
+  const renderDiagram = () => {
+    window.history.pushState({}, "", "/diagram?repo=test-owner/test-repo")
+    return render(
+      <MemoryRouter initialEntries={["/diagram?repo=test-owner/test-repo"]}>
+        <WorkspaceProvider>
+          <Diagram />
+        </WorkspaceProvider>
+      </MemoryRouter>,
     )
+  }
 
   it("disables the add button once every tracked branch has been added", async () => {
     renderDiagram()

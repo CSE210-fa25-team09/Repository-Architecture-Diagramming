@@ -13,6 +13,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -295,6 +296,10 @@ export function DiagramPanel({
                 <DialogTitle className="text-xl">
                   {branch.label} branch {diagramLabel.toLowerCase()}
                 </DialogTitle>
+                <DialogDescription className="text-[color:var(--muted-text)]">
+                  Enlarged view of the {diagramLabel.toLowerCase()} for {branch.label}{" "}
+                  branch.
+                </DialogDescription>
                 <Button
                   variant="ghost"
                   size="sm"
