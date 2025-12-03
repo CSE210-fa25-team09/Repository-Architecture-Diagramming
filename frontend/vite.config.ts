@@ -12,6 +12,15 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      "/api": {
+        target: "https://repository-architecture-diagramming.onrender.com",
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
   test: {
     environment: "jsdom",
     css: true,

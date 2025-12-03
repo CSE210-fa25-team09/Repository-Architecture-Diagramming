@@ -1,6 +1,4 @@
-import branchesMock from "./mocks/branches.json"
-import analyzeRepoMock from "./mocks/analyzeRepo.json"
-import repoTreeMock from "./mocks/repoTree.json"
+// --------- Types shared with the UI ---------
 
 export type WorkspaceBranch = {
   id: string
@@ -32,31 +30,39 @@ export type RepoTreeNode = {
   children?: RepoTreeNode[]
 }
 
-export type RepoTreeResponse = {
-  success: boolean
+export type BranchFileTreeResponse = {
+  branchId: string
   tree: RepoTreeNode[]
 }
+
+// For /api/architecture
+export type ArchitectureMetadata = {
+  owner: string
+  repo: string
+  repoUrl: string
+  branch: string
+  branchSummary: Record<string, unknown>
+  latestCommit: Record<string, unknown>
+  fileStats: Record<string, unknown>
+  treePreview: unknown[]
+  llm: Record<string, unknown>
+}
+
+export type ArchitectureDiagramResponse = {
+  success: boolean
+  diagram: string
+  metadata: ArchitectureMetadata
+}
+
+// --------- Simple in-memory cache of “current repo” ---------
 
 let cachedWorkspace: WorkspaceResponse | null = null
 let cachedRepoCoords: { owner: string; repo: string } | null = null
 
-type BranchesMockResponse = {
-  success: boolean
-  branches: string[]
-  repoDescription: string
-}
+const API_BASE_URL = "https://repository-architecture-diagramming.onrender.com"
 
-const MOCK_BRANCHES_RESPONSE = branchesMock as BranchesMockResponse
-
-const MOCK_ANALYZE_RESPONSES = analyzeRepoMock as Record<
-  string,
-  Omit<BranchDiagramResponse, "branchId">
->
-
-const MOCK_REPO_TREE = repoTreeMock as Record<string, RepoTreeResponse>
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+function withApiBase(path: string) {
+  return `${API_BASE_URL}${path}`
 }
 
 function parseRepositoryIdentifier(identifier: string): {
@@ -87,34 +93,50 @@ function parseRepositoryIdentifier(identifier: string): {
   throw new Error("Unsupported repository identifier format.")
 }
 
+// -------------------------------------------------------------
+// GET /api/branches  →  fetchInitialWorkspace()
+// -------------------------------------------------------------
+//
+// - Backend: returns { success, branches: string[], repoDescription }
+// - Frontend: turns that into WorkspaceResponse and remembers which
+//   owner/repo we’re currently looking at (cachedRepoCoords).
+// -------------------------------------------------------------
+
 export async function fetchInitialWorkspace(
   identifier: string,
 ): Promise<WorkspaceResponse> {
-  if (cachedWorkspace) return cachedWorkspace
-
   const { owner, repo, fullName } = parseRepositoryIdentifier(identifier)
+
+  // Only reuse cache if it's the exact same repo
+  if (
+    cachedWorkspace &&
+    cachedRepoCoords &&
+    cachedRepoCoords.owner === owner &&
+    cachedRepoCoords.repo === repo
+  ) {
+    return cachedWorkspace
+  }
+
   cachedRepoCoords = { owner, repo }
 
-  // const url = `/api/branches?owner=${encodeURIComponent(
-  //   owner,
-  // )}&repo=${encodeURIComponent(repo)}`
-  // const resp = await fetch(url)
+  const url = `/api/branches?owner=${encodeURIComponent(
+    owner,
+  )}&repo=${encodeURIComponent(repo)}`
+  const resp = await fetch(withApiBase(url))
 
-  // if (!resp.ok) {
-  //   throw new Error(`Failed to fetch branches: ${resp.status} ${resp.statusText}`)
-  // }
+  if (!resp.ok) {
+    throw new Error(`Failed to fetch branches: ${resp.status} ${resp.statusText}`)
+  }
 
-  // const data: {
-  //   success: boolean
-  //   branches: string[]
-  //   repoDescription: string
-  // } = await resp.json()
+  const data: {
+    success: boolean
+    branches: string[]
+    repoDescription: string
+  } = await resp.json()
 
-  // if (!data.success) {
-  //   throw new Error("Backend returned failure for /api/branches")
-  // }
-
-  const data = MOCK_BRANCHES_RESPONSE
+  if (!data.success) {
+    throw new Error("Backend returned failure for /api/branches")
+  }
 
   const workspace: WorkspaceResponse = {
     repo: {
@@ -131,6 +153,14 @@ export async function fetchInitialWorkspace(
   return workspace
 }
 
+// -------------------------------------------------------------
+// GET /api/analyzeRepo → fetchBranchDiagram()
+// -------------------------------------------------------------
+//
+// - Uses cachedRepoCoords (set by fetchInitialWorkspace)
+// - Backend returns Mermaid strings + metadata.
+// -------------------------------------------------------------
+
 export async function fetchBranchDiagram(
   branchId: string,
 ): Promise<BranchDiagramResponse> {
@@ -138,34 +168,30 @@ export async function fetchBranchDiagram(
     throw new Error("No repository info cached—call fetchInitialWorkspace() first.")
   }
 
-  // const { owner, repo } = cachedRepoCoords
+  const { owner, repo } = cachedRepoCoords
 
-  // const url = `/api/analyzeRepo?owner=${encodeURIComponent(
-  //   owner,
-  // )}&repo=${encodeURIComponent(repo)}&branch=${encodeURIComponent(branchId)}`
-  // const resp = await fetch(url)
+  const url = `/api/analyzeRepo?owner=${encodeURIComponent(
+    owner,
+  )}&repo=${encodeURIComponent(repo)}&branch=${encodeURIComponent(branchId)}`
+  const resp = await fetch(withApiBase(url))
 
-  // if (!resp.ok) {
-  //   throw new Error(`Failed to fetch branch diagram: ${resp.status} ${resp.statusText}`)
-  // }
+  if (!resp.ok) {
+    throw new Error(`Failed to fetch branch diagram: ${resp.status} ${resp.statusText}`)
+  }
 
-  // const data: {
-  //   allDependencies: string
-  //   internalDependencies: string
-  //   timestamp: number
-  //   repoDescription: string
-  //   commitId: string
-  //   commitMessage: string
-  //   error?: string
-  // } = await resp.json()
+  const data: {
+    allDependencies: string
+    internalDependencies: string
+    timestamp: number
+    repoDescription: string
+    commitId: string
+    commitMessage: string
+    error?: string
+  } = await resp.json()
 
-  // if (data.error) {
-  //   throw new Error(data.error)
-  // }
-
-  const data = MOCK_ANALYZE_RESPONSES[branchId]
-
-  await delay(6000)
+  if (data.error) {
+    throw new Error(data.error)
+  }
 
   return {
     branchId,
@@ -178,19 +204,83 @@ export async function fetchBranchDiagram(
   }
 }
 
-export async function fetchRepoTree(branchId = "main"): Promise<RepoTreeResponse> {
+// -------------------------------------------------------------
+// GET /api/repoTree → fetchRepoTree()
+// -------------------------------------------------------------
+//
+// - Uses cachedRepoCoords (current repo)
+// - Backend returns { success, tree: RepoTreeNode }.
+// -------------------------------------------------------------
+
+export async function fetchRepoTree(branchId: string): Promise<BranchFileTreeResponse> {
   if (!cachedRepoCoords) {
     throw new Error("No repository info cached—call fetchInitialWorkspace() first.")
   }
 
-  const data = MOCK_REPO_TREE[branchId]
+  const { owner, repo } = cachedRepoCoords
 
-  if (!data) {
-    const { owner, repo } = cachedRepoCoords
-    throw new Error(`No mock repo tree for ${owner}/${repo} on branch ${branchId}`)
+  const url = `/api/repoTree?owner=${encodeURIComponent(
+    owner,
+  )}&repo=${encodeURIComponent(repo)}&branch=${encodeURIComponent(branchId)}`
+  const resp = await fetch(withApiBase(url))
+
+  if (!resp.ok) {
+    throw new Error(`Failed to fetch branch file tree: ${resp.status} ${resp.statusText}`)
   }
 
-  await delay(500)
+  const data: {
+    success: boolean
+    tree: RepoTreeNode | RepoTreeNode[]
+    error?: string
+  } = await resp.json()
+
+  if (!data.success) {
+    throw new Error("Backend returned failure for /api/repoTree")
+  }
+  if (data.error) {
+    throw new Error(data.error)
+  }
+
+  return {
+    branchId,
+    tree: Array.isArray(data.tree) ? data.tree : [data.tree],
+  }
+}
+
+// -------------------------------------------------------------
+// GET /api/architecture → fetchArchitectureDiagram()
+// -------------------------------------------------------------
+//
+// - Sends repoUrl + optional branch
+// - Backend returns { success, diagram, metadata }.
+// - For LLM graphs, callers mostly care about `diagram` string.
+// -------------------------------------------------------------
+
+export async function fetchArchitectureDiagram(
+  repoUrl: string,
+  branch?: string,
+): Promise<ArchitectureDiagramResponse> {
+  const params = new URLSearchParams({ repoUrl })
+  if (branch) params.set("branch", branch)
+
+  const resp = await fetch(withApiBase(`/api/architecture?${params.toString()}`))
+
+  if (!resp.ok) {
+    throw new Error(
+      `Failed to fetch architecture diagram: ${resp.status} ${resp.statusText}`,
+    )
+  }
+
+  const data: {
+    success: boolean
+    diagram: string
+    metadata: ArchitectureMetadata
+    error?: string
+  } = await resp.json()
+
+  if (!data.success) {
+    throw new Error(data.error || "Backend returned failure for /api/architecture")
+  }
 
   return data
 }

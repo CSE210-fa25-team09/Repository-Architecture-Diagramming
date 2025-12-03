@@ -51,7 +51,6 @@ export default function RepositoryInputCard() {
 
     setLoading(true)
     try {
-      // 1) Call mock backend
       const workspace = await fetchInitialWorkspace(repoIdentifier)
 
       // 2) Store in global context

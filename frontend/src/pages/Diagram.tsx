@@ -8,6 +8,7 @@ import {
 
 import { BRANCH_LIST, REPOSITORY_NAME, WORKSPACE_SUMMARY } from "@/lib/mockData"
 import { GithubIcon, Plus } from "lucide-react"
+import { useLocation } from "react-router-dom"
 import { useMemo, useState, useEffect, useCallback } from "react"
 import { useWorkspace } from "@/lib/workspaceContext"
 
@@ -18,6 +19,7 @@ import {
 } from "@/components/shared/DiagramPanel"
 import { fetchBranchDiagram, fetchRepoTree, fetchInitialWorkspace } from "@/api/diagram"
 import { formatLastGenerated, repoTreeToAscii } from "@/lib/utils"
+import { NotFound } from "@/pages/NotFound"
 
 type BranchId = string
 
@@ -30,13 +32,12 @@ const DEFAULT_DIAGRAMS: DiagramPanelState[] = [{ id: "diagram-1", branchId: "mai
 const ADD_PANEL_TRIGGER_ID = "diagram-add-trigger"
 
 export function Diagram() {
-  const {
-    workspace,
-    setWorkspaceForRepo,
-    setBranchCacheForRepo,
-    branchCacheMap,
-    setCurrentRepoKey,
-  } = useWorkspace()
+  const { workspace, setWorkspaceForRepo, setCurrentRepoKey } = useWorkspace()
+  const location = useLocation()
+  const repoParam = useMemo(
+    () => new URLSearchParams(location.search).get("repo")?.trim() ?? "",
+    [location.search],
+  )
 
   const [repoName, setRepoName] = useState(workspace?.repo?.name ?? REPOSITORY_NAME)
   const [repoSummary, setRepoSummary] = useState(
@@ -66,12 +67,6 @@ export function Diagram() {
   }, [workspace, setCurrentRepoKey])
 
   useEffect(() => {
-    if (repoKey && branchCacheMap[repoKey]) {
-      setBranchDetails(branchCacheMap[repoKey])
-    }
-  }, [branchCacheMap, repoKey])
-
-  useEffect(() => {
     if (workspace?.branches) {
       setBranches(workspace.branches.map((b) => b.name))
     }
@@ -79,24 +74,18 @@ export function Diagram() {
 
   useEffect(() => {
     if (workspace) return
+    if (!repoParam) return
     let mounted = true
     const loadWorkspace = async () => {
       try {
-        const params = new URLSearchParams(window.location.search)
-        const repoParam = params.get("repo")
-        const repoIdentifier =
-          repoParam && repoParam.trim().length > 0
-            ? decodeURIComponent(repoParam)
-            : BRANCH_LIST[0]
-        const ws = await fetchInitialWorkspace(repoIdentifier)
+        const ws = await fetchInitialWorkspace(decodeURIComponent(repoParam))
         if (!mounted) return
         setCurrentRepoKey(ws.repo.name)
         setWorkspaceForRepo(ws.repo.name, ws)
         setRepoName(ws.repo.name)
         setRepoSummary(ws.repo.description ?? WORKSPACE_SUMMARY)
         setBranches(ws.branches.map((b) => b.name))
-        const cachedBranches = branchCacheMap[ws.repo.name]
-        setBranchDetails(cachedBranches ? cachedBranches : ({} as BranchLibrary))
+        setBranchDetails({} as BranchLibrary)
       } catch (err) {
         console.error("Failed to initialize workspace", err)
       }
@@ -105,19 +94,12 @@ export function Diagram() {
     return () => {
       mounted = false
     }
-  }, [workspace, setCurrentRepoKey, setWorkspaceForRepo, branchCacheMap])
+  }, [workspace, setCurrentRepoKey, setWorkspaceForRepo, repoParam])
 
   const ensureBranchData = useCallback(
     async (branchId: string) => {
       if (!repoKey || !workspace) return
-      const repoCache = repoKey ? branchCacheMap[repoKey] : undefined
       const existingCached = branchDetails[branchId]
-      const cachedFromRepo = repoCache ? repoCache[branchId] : undefined
-
-      if (cachedFromRepo && !branchDetails[branchId]) {
-        setBranchDetails((prev) => ({ ...prev, [branchId]: cachedFromRepo }))
-        return
-      }
 
       if (
         existingCached &&
@@ -170,9 +152,6 @@ export function Diagram() {
                 diagramError: undefined,
               },
             }
-            if (repoKey) {
-              setBranchCacheForRepo(repoKey, updated)
-            }
             return updated
           })
         } catch (err) {
@@ -203,9 +182,6 @@ export function Diagram() {
               ...prev,
               [branchId]: { ...existing, fileTree: formattedTree, treeLoading: false },
             }
-            if (repoKey) {
-              setBranchCacheForRepo(repoKey, updated)
-            }
             return updated
           })
         } catch (err) {
@@ -228,7 +204,7 @@ export function Diagram() {
       void loadDiagram()
       void loadTree()
     },
-    [repoName, branchDetails, setBranchCacheForRepo, repoKey, workspace, branchCacheMap],
+    [repoName, branchDetails, repoKey, workspace],
   )
 
   const handleAddPanel = (branchId: string) => {
@@ -294,18 +270,12 @@ export function Diagram() {
     if (!repoKey || !workspace) return
     panels.forEach((panel) => {
       if (!branchDetails[panel.branchId]) {
-        const repoCache = branchCacheMap[repoKey]
-        if (repoCache && repoCache[panel.branchId]) {
-          setBranchDetails((prev) => ({
-            ...prev,
-            [panel.branchId]: repoCache[panel.branchId],
-          }))
-          return
-        }
         void ensureBranchData(panel.branchId)
       }
     })
-  }, [panels, ensureBranchData, branchDetails, repoKey, workspace, branchCacheMap])
+  }, [panels, ensureBranchData, branchDetails, repoKey, workspace])
+
+  if (!repoParam) return <NotFound />
 
   return (
     <main className="flex flex-1 flex-col gap-10 px-4 pb-12 sm:px-0">
