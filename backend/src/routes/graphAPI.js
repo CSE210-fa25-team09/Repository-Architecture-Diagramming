@@ -7,7 +7,7 @@ import githubService from '../services/githubService.js';
 
 dotenv.config();
 
-const maxFiles = process.env.MAX_ANALYZE_FILES ? parseInt(process.env.MAX_ANALYZE_FILES) : 1000;
+const maxFiles = process.env.MAX_ANALYZE_FILES ? parseInt(process.env.MAX_ANALYZE_FILES) : 100;
 const graphRouter = express.Router();
 
 // Endpoint to analyze repository and return diagrams with metadata

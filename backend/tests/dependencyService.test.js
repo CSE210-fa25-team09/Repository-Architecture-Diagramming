@@ -8,7 +8,7 @@ const mockGithubService = {
 
 describe('Dependency Service Tests', () => {
 
-  test('extractFilesByLanguage should filter files correctly', () => {
+  test('extractFilesByLanguage should filter files correctly (BFS order)', () => {
     const mockTree = [
       { name: 'src', type: 'dir', children: [
         { name: 'index.js', type: 'file' },
@@ -24,8 +24,9 @@ describe('Dependency Service Tests', () => {
     const pyFiles = dependencyService.extractFilesByLanguage(mockTree, 'python');
     expect(pyFiles).toEqual(['main.py']);
 
+    // BFS order: root-level files first, then nested files
     const allFiles = dependencyService.extractFilesByLanguage(mockTree, 'all');
-    expect(allFiles).toEqual(['src/index.js', 'src/utils.ts', 'main.py']);
+    expect(allFiles).toEqual(['main.py', 'src/index.js', 'src/utils.ts']);
   });
 
   test('parseFile should detect JavaScript imports', () => {

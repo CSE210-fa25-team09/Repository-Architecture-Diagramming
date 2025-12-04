@@ -247,6 +247,9 @@ function resolveImportPath(sourcePath, importPath, fileSet) {
   
   const basePath = parts.join('/');
   
+  // First try the path as-is (for imports that already include extension)
+  if (fileSet.has(basePath)) return basePath;
+  
   // Get language-specific extensions to try
   const language = getLanguageFromExtension(sourcePath);
   const extensionsToTry = PATH_RESOLUTION_EXTENSIONS[language] || PATH_RESOLUTION_EXTENSIONS.javascript;
@@ -311,7 +314,9 @@ function exportDependencyGraphWithTree(parsedFiles, repoTree) {
 }
 
 /**
- * Extract files from a tree structure by language
+ * Extract files from a tree structure by language using BFS
+ * BFS ensures files at shallower depths are collected first,
+ * providing better coverage of top-level architecture when maxFiles is limited
  * @param {Array|Object} tree - The tree structure (array of nodes or single root node)
  * @param {string} language - Language name ('jsts', 'cpp', 'python', 'java', 'go', or 'all')
  * @returns {Array} Array of file paths matching the language
@@ -335,24 +340,29 @@ function extractFilesByLanguage(tree, language = 'all') {
     throw new Error(`Unknown language: ${language}. Use 'jsts', 'cpp', 'python', 'java', 'go', or 'all'`);
   }
   
-  function traverse(nodes, currentPath = '') {
-    if (!Array.isArray(nodes)) return;
-    nodes.forEach(node => {
-      const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
-      const ext = node.name.substring(node.name.lastIndexOf('.'));
-      if (node.type === 'file' && targetExtensions.includes(ext)) {
-        codeFiles.push(fullPath);
-      } else if (node.type === 'dir' && node.children) {
-        traverse(node.children, fullPath);
-      }
-    });
+  // BFS traversal to prioritize files at shallower depths
+  const queue = [];
+  
+  // Initialize queue with root nodes
+  if (Array.isArray(tree)) {
+    tree.forEach(node => queue.push({ node, currentPath: '' }));
+  } else if (tree && tree.children) {
+    tree.children.forEach(node => queue.push({ node, currentPath: tree.path || '' }));
   }
   
-  // Handle both array of nodes and single root node with children
-  if (Array.isArray(tree)) {
-    traverse(tree);
-  } else if (tree && tree.children) {
-    traverse(tree.children, tree.path || '');
+  while (queue.length > 0) {
+    const { node, currentPath } = queue.shift();
+    const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
+    
+    if (node.type === 'file') {
+      const ext = node.name.substring(node.name.lastIndexOf('.'));
+      if (targetExtensions.includes(ext)) {
+        codeFiles.push(fullPath);
+      }
+    } else if (node.type === 'dir' && node.children) {
+      // Add children to queue for BFS
+      node.children.forEach(child => queue.push({ node: child, currentPath: fullPath }));
+    }
   }
   
   return codeFiles;
