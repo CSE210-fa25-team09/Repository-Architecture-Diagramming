@@ -8,10 +8,6 @@
  * 3. Renderers - Generate Mermaid syntax output
  */
 
-// =============================================================================
-// UTILITY FUNCTIONS
-// =============================================================================
-
 const sanitizeLabel = (label) => label.replace(/["[\]]/g, '');
 const getFileName = (path) => path.split('/').pop();
 const getFolderPath = (path) => {
@@ -19,13 +15,6 @@ const getFolderPath = (path) => {
   return lastSlash > 0 ? path.substring(0, lastSlash) : '';
 };
 
-// =============================================================================
-// ID GENERATORS
-// =============================================================================
-
-/**
- * Creates a unique ID generator for graph nodes
- */
 function createNodeIdGenerator() {
   const nodes = new Map();
   let counter = 0;
@@ -41,9 +30,6 @@ function createNodeIdGenerator() {
   };
 }
 
-/**
- * Creates a unique ID generator for folder subgraphs
- */
 function createSubgraphIdGenerator() {
   const subgraphs = new Map();
   
@@ -57,10 +43,6 @@ function createSubgraphIdGenerator() {
     }
   };
 }
-
-// =============================================================================
-// DATA COLLECTORS - Extract information from dependency tree
-// =============================================================================
 
 /**
  * Collects nodes and edges from a dependency tree
@@ -197,13 +179,6 @@ function buildFolderHierarchy(nodes) {
   return root;
 }
 
-// =============================================================================
-// MERMAID RENDERERS - Generate Mermaid syntax
-// =============================================================================
-
-/**
- * Renders nodes grouped by folders as Mermaid subgraphs
- */
 function renderFolderSubgraphs(hierarchy, getSubgraphId, indent = 1) {
   const renderedNodes = new Set();
 
@@ -233,9 +208,6 @@ function renderFolderSubgraphs(hierarchy, getSubgraphId, indent = 1) {
   return { lines: render(hierarchy, indent), renderedNodes };
 }
 
-/**
- * Renders external/builtin nodes grouped in a subgraph
- */
 function renderExternalNodes(nodes, renderedNodes) {
   const lines = [];
   const externalNodeLines = [];
@@ -257,12 +229,6 @@ function renderExternalNodes(nodes, renderedNodes) {
   return lines;
 }
 
-/**
- * Renders edges as Mermaid arrows
- * Internal deps: solid black arrows (-->)
- * External deps: dotted grey arrows (-.->)
- * Returns both edge lines and indices of external edges for styling
- */
 function renderEdges(edges, nodes) {
   const lines = ['', '    %% Dependencies'];
   const externalIndices = [];
@@ -286,9 +252,6 @@ function renderEdges(edges, nodes) {
   return { lines, externalIndices };
 }
 
-/**
- * Renders node style definitions
- */
 function renderStyles(nodeStyles) {
   const lines = ['', '    %% Styling'];
   
@@ -309,10 +272,6 @@ function renderStyles(nodeStyles) {
   return lines;
 }
 
-/**
- * Renders a simple flat graph (no folder grouping)
- * Returns both edge lines and indices of external edges for styling
- */
 function renderFlatGraph(nodes, edges) {
   const lines = [];
   const externalIndices = [];
@@ -334,10 +293,6 @@ function renderFlatGraph(nodes, edges) {
   
   return { lines, externalIndices };
 }
-
-// =============================================================================
-// PUBLIC API
-// =============================================================================
 
 /**
  * Generate a Mermaid flowchart with optional styling and folder grouping

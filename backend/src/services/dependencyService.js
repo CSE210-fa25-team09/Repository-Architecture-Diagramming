@@ -338,9 +338,6 @@ function extractFilesByLanguage(tree, language = 'all', options = {}) {
   const { includeTests = false } = options;
   const codeFiles = [];
   
-  /**
-   * Check if a file path represents a test file
-   */
   function isTestFile(filePath, fileName) {
     // Check if file is in a test directory
     const pathParts = filePath.split('/');
