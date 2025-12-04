@@ -33,6 +33,8 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/diagram" element={<Diagram />} />
+            <Route path="/sample/:sampleId" element={<Diagram />} />
+            <Route path="/history/:historyId" element={<Diagram />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>

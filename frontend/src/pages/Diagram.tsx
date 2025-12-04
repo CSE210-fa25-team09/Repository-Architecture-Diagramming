@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { GithubIcon, Plus } from "lucide-react"
-import { useLocation } from "react-router-dom"
+import { useLocation, useParams } from "react-router-dom"
 import { useMemo, useState, useEffect, useCallback } from "react"
 import { useWorkspace } from "@/lib/workspaceContext"
 
@@ -38,19 +38,35 @@ const ADD_PANEL_TRIGGER_ID = "diagram-add-trigger"
 export function Diagram() {
   const { workspace, setWorkspaceForRepo, setCurrentRepoKey } = useWorkspace()
   const location = useLocation()
+  const { sampleId, historyId } = useParams()
+
   const repoParam = useMemo(
     () => new URLSearchParams(location.search).get("repo")?.trim() ?? "",
     [location.search],
   )
+  const effectiveRepoIdentifier = useMemo(() => {
+    if (repoParam) return decodeURIComponent(repoParam)
+
+    if (sampleId) {
+      return mapSampleIdToUrl(sampleId)
+    }
+
+    if (historyId) {
+      return decodeURIComponent(historyId)
+    }
+
+    return ""
+  }, [repoParam, sampleId, historyId])
 
   const [repoName, setRepoName] = useState(workspace?.repo?.name ?? "")
   const [repoSummary, setRepoSummary] = useState(workspace?.repo?.description ?? "")
+
   const repoUrl = useMemo(() => {
-    const decoded = decodeURIComponent(repoParam || "")
+    const decoded = effectiveRepoIdentifier || ""
     if (decoded.startsWith("http")) return decoded
     const baseName = repoName || decoded
     return baseName ? `https://github.com/${baseName}` : ""
-  }, [repoParam, repoName])
+  }, [effectiveRepoIdentifier, repoName])
 
   useEffect(() => {
     if (workspace?.repo) {
@@ -82,11 +98,13 @@ export function Diagram() {
 
   useEffect(() => {
     if (workspace) return
-    if (!repoParam) return
+    if (!effectiveRepoIdentifier) return
+
     let mounted = true
+
     const loadWorkspace = async () => {
       try {
-        const ws = await fetchInitialWorkspace(decodeURIComponent(repoParam))
+        const ws = await fetchInitialWorkspace(effectiveRepoIdentifier)
         if (!mounted) return
         setCurrentRepoKey(ws.repo.name)
         setWorkspaceForRepo(ws.repo.name, ws)
@@ -98,11 +116,13 @@ export function Diagram() {
         console.error("Failed to initialize workspace", err)
       }
     }
+
     void loadWorkspace()
+
     return () => {
       mounted = false
     }
-  }, [workspace, setCurrentRepoKey, setWorkspaceForRepo, repoParam])
+  }, [workspace, setCurrentRepoKey, setWorkspaceForRepo, effectiveRepoIdentifier])
 
   const ensureBranchData = useCallback(
     async (branchId: string) => {
@@ -370,8 +390,7 @@ export function Diagram() {
       }
     })
   }, [panels, ensureBranchData, branchDetails, repoKey, workspace])
-
-  if (!repoParam) return <NotFound />
+  if (!effectiveRepoIdentifier && !workspace) return <NotFound />
 
   return (
     <main className="flex flex-1 flex-col gap-10 px-4 pb-12 sm:px-0">
@@ -488,4 +507,18 @@ export function Diagram() {
       </section>
     </main>
   )
+}
+function mapSampleIdToUrl(id: string) {
+  switch (id) {
+    case "our-repo":
+      return "https://github.com/CSE210-fa25-team09/Repository-Architecture-Diagramming"
+    case "fastapi":
+      return "https://github.com/tiangolo/fastapi"
+    case "call-center-ai":
+      return "https://github.com/microsoft/call-center-ai"
+    case "verl":
+      return "https://github.com/volcengine/verl"
+    default:
+      return id
+  }
 }

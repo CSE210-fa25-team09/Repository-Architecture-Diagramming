@@ -1,5 +1,6 @@
 // src/pages/SampleSection.tsx
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ChevronDown, ChevronUp } from "lucide-react"
@@ -14,6 +15,7 @@ const ROW_VISIBLE = 4
 
 export function SampleSection({ repos = [], onRepoClick }: SampleSectionProps) {
   const [expanded, setExpanded] = useState(false)
+  const navigate = useNavigate()
 
   if (repos.length === 0) {
     return (
@@ -27,6 +29,11 @@ export function SampleSection({ repos = [], onRepoClick }: SampleSectionProps) {
   const primaryRepos = repos.slice(0, ROW_VISIBLE)
   const extraRepos = repos.slice(ROW_VISIBLE)
   const hasMore = extraRepos.length > 0
+
+  const handleCardClick = (repo: Repo) => {
+    onRepoClick?.(repo)
+    navigate(`/sample/${repo.id}`)
+  }
 
   return (
     <section className="space-y-4">
@@ -54,12 +61,13 @@ export function SampleSection({ repos = [], onRepoClick }: SampleSectionProps) {
           </Button>
         )}
       </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {primaryRepos.map((repo) => (
           <Card
             key={repo.id}
             className="h-32 w-full hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => onRepoClick?.(repo)}
+            onClick={() => handleCardClick(repo)}
           >
             <CardHeader className="space-y-1">
               <CardTitle className="text-sm font-semibold truncate">
@@ -79,7 +87,7 @@ export function SampleSection({ repos = [], onRepoClick }: SampleSectionProps) {
             <Card
               key={repo.id}
               className="h-32 w-full hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => onRepoClick?.(repo)}
+              onClick={() => handleCardClick(repo)}
             >
               <CardHeader className="space-y-1">
                 <CardTitle className="text-sm font-semibold truncate">
