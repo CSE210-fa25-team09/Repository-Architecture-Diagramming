@@ -3,18 +3,17 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@radix-ui/react-label"
-import { Separator } from "@radix-ui/react-separator"
-import { Upload, Loader2, AlertCircle } from "lucide-react"
+import { Loader2, AlertCircle } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
 import { fetchInitialWorkspace } from "@/api/diagram"
 import { useWorkspace } from "@/lib/workspaceContext"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+
 export default function RepositoryInputCard() {
   const navigate = useNavigate()
   const { setWorkspaceForRepo, setCurrentRepoKey } = useWorkspace()
   const [repoUrl, setRepoUrl] = React.useState("")
-  const [zipFile, setZipFile] = React.useState<File | null>(null)
   const [error, setError] = React.useState("")
   const [loading, setLoading] = React.useState(false)
 
@@ -23,16 +22,9 @@ export default function RepositoryInputCard() {
     return githubRegex.test(url)
   }
 
-  function handleZipFile(e: React.ChangeEvent<HTMLInputElement>) {
-    if (e.target.files) {
-      setZipFile(e.target.files[0])
-    }
-  }
-
   function validateInputs() {
-    if (isValidRepoUrl(repoUrl)) return { ok: true, type: "url" as const }
-    if (zipFile) return { ok: true, type: "zip" as const }
-    return { ok: false }
+    if (isValidRepoUrl(repoUrl)) return { ok: true as const }
+    return { ok: false as const }
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -42,27 +34,22 @@ export default function RepositoryInputCard() {
     const result = validateInputs()
 
     if (!result.ok) {
-      setError("Please enter a valid GitHub repo URL or upload a .zip file.")
+      setError("Please enter a valid GitHub repo URL.")
       return
     }
 
-    // This is what we send to the mock API (it does not really matter yet)
-    const repoIdentifier = result.type === "url" ? repoUrl : zipFile!.name
+    const repoIdentifier = repoUrl
 
     setLoading(true)
     try {
       const workspace = await fetchInitialWorkspace(repoIdentifier)
 
-      // 2) Store in global context
+      // Store in global context
       setWorkspaceForRepo(workspace.repo.name, workspace)
       setCurrentRepoKey(workspace.repo.name)
 
-      // 3) Navigate to diagram page (keep existing query params for future use)
-      const route =
-        result.type === "url"
-          ? `/diagram?repo=${encodeURIComponent(repoUrl)}`
-          : `/diagram?zip=${encodeURIComponent(zipFile!.name)}`
-
+      // Navigate to diagram page
+      const route = `/diagram?repo=${encodeURIComponent(repoUrl)}`
       navigate(route)
     } catch (err) {
       console.error(err)
@@ -123,35 +110,6 @@ export default function RepositoryInputCard() {
             </Alert>
           )}
         </form>
-      </CardContent>
-
-      <CardContent>
-        <div className="flex flex-wrap items-center gap-3 text-sm text-[color:var(--muted-text)]">
-          <Separator
-            className="hidden h-6 w-px bg-[color:var(--panel-border)] md:block"
-            orientation="vertical"
-          />
-          {/* Upload Icon*/}
-          <Upload className="h-4 w-4 text-[color:var(--icon-muted)]" />
-          <Label htmlFor="zip-upload">Or upload a .zip file of the repository</Label>
-          {/* Button for user to select zip file that user wants to upload to generate a diagram */}
-          <Input
-            type="file"
-            accept=".zip"
-            className="hidden"
-            id="zip-upload"
-            onChange={handleZipFile}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 rounded-full border-[color:var(--panel-border)] text-[color:var(--muted-text)] !bg-transparent hover:brightness-110"
-            onClick={() => document.getElementById("zip-upload")?.click()}
-          >
-            <Upload className="h-4 w-4" />
-            Upload Zip
-          </Button>
-        </div>
       </CardContent>
     </Card>
   )
