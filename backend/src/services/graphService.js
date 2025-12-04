@@ -144,8 +144,8 @@ function buildFolderHierarchy(nodes) {
   
   // Group nodes by folder path
   const nodesByFolder = new Map();
-  for (const [_, node] of nodes) {
-    if (node.folderPath === null) continue; // Skip external/builtin
+  for (const node of nodes.values()) {
+    if (node.folderPath === null) continue; 
     
     const folderPath = node.folderPath;
     if (!nodesByFolder.has(folderPath)) {
