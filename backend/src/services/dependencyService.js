@@ -3,6 +3,8 @@ import {
   BUILTIN_MODULES, 
   FILE_EXTENSIONS,
   PATH_RESOLUTION_EXTENSIONS,
+  TEST_DIR_PATTERNS,
+  TEST_FILE_PATTERNS,
   getLanguageFromExtension
 } from '../config/parserConfig.js';
 
@@ -319,10 +321,28 @@ function exportDependencyGraphWithTree(parsedFiles, repoTree) {
  * providing better coverage of top-level architecture when maxFiles is limited
  * @param {Array|Object} tree - The tree structure (array of nodes or single root node)
  * @param {string} language - Language name ('jsts', 'cpp', 'python', 'java', 'go', or 'all')
+ * @param {Object} options - Extraction options
+ * @param {boolean} options.includeTests - Whether to include test files (default: false)
  * @returns {Array} Array of file paths matching the language
  */
-function extractFilesByLanguage(tree, language = 'all') {
+function extractFilesByLanguage(tree, language = 'all', options = {}) {
+  const { includeTests = false } = options;
   const codeFiles = [];
+  
+  /**
+   * Check if a file path represents a test file
+   */
+  function isTestFile(filePath, fileName) {
+    // Check if file is in a test directory
+    const pathParts = filePath.split('/');
+    for (const part of pathParts.slice(0, -1)) { // Exclude filename
+      if (TEST_DIR_PATTERNS.some(pattern => pattern.test(part))) {
+        return true;
+      }
+    }
+    // Check if filename matches test patterns
+    return TEST_FILE_PATTERNS.some(pattern => pattern.test(fileName));
+  }
   
   // Determine which extensions to look for
   let targetExtensions;
@@ -357,9 +377,17 @@ function extractFilesByLanguage(tree, language = 'all') {
     if (node.type === 'file') {
       const ext = node.name.substring(node.name.lastIndexOf('.'));
       if (targetExtensions.includes(ext)) {
+        // Skip test files unless explicitly included
+        if (!includeTests && isTestFile(fullPath, node.name)) {
+          continue;
+        }
         codeFiles.push(fullPath);
       }
     } else if (node.type === 'dir' && node.children) {
+      // Skip test directories entirely unless tests are included
+      if (!includeTests && TEST_DIR_PATTERNS.some(pattern => pattern.test(node.name))) {
+        continue;
+      }
       // Add children to queue for BFS
       node.children.forEach(child => queue.push({ node: child, currentPath: fullPath }));
     }
@@ -375,20 +403,23 @@ function extractFilesByLanguage(tree, language = 'all') {
  * @param {string} repo - Repository name
  * @param {string} branch - Branch name
  * @param {Object} options - Analysis options
+ * @param {number} options.maxFiles - Maximum number of files to analyze
+ * @param {string} options.language - Language filter ('jsts', 'cpp', 'python', 'java', 'go', or 'all')
+ * @param {boolean} options.includeTests - Whether to include test files (default: false)
  * @returns {Object} Analysis result with tree, parsedFiles, and metadata
  */
 async function analyzeDependencies(githubService, owner, repo, branch, options = {}) {
-  const { maxFiles = 1000, language = 'all' } = options;
+  const { maxFiles = 1000, language = 'all', includeTests = false } = options;
   
   try {
     // Get repository tree
     const tree = await githubService.getRepoTree(owner, repo, '', branch);
     
-    // Extract files by language
-    const allCodeFiles = extractFilesByLanguage(tree, language);
+    // Extract files by language (excludes test files by default)
+    const allCodeFiles = extractFilesByLanguage(tree, language, { includeTests });
     const filesToAnalyze = maxFiles ? allCodeFiles.slice(0, maxFiles) : allCodeFiles;
     
-    console.log(`Found ${allCodeFiles.length} files, analyzing ${filesToAnalyze.length}`);
+    console.log(`Found ${allCodeFiles.length} files${includeTests ? '' : ' (excluding tests)'}, analyzing ${filesToAnalyze.length}`);
     
     // Parse all files
     const parsedFiles = [];

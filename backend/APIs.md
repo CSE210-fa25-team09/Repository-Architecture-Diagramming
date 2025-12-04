@@ -132,6 +132,7 @@ Analyze repository and return dependency diagrams with repository metadata. Resu
 - `owner` (required) - Repository owner/organization name
 - `repo` (required) - Repository name
 - `branch` (optional) - Branch name (defaults to repository's default branch)
+- `includeTests` (optional) - Include test file dependencies in analysis (`true` or `false`, defaults to `false`)
 
 **Example:**
 ```
