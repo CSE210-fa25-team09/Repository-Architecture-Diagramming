@@ -79,7 +79,8 @@ Returns list of all branches and repository description. This endpoint provides 
 **Schema:**
 - `success` (boolean) - Request status
 - `branches` (array) - List of branch names (strings)
-- `repoDescription` (string) - Repository description/about text
+- `repoDescription` (string) - Repository description/about 
+- `defaultBranch` (string) - Default branch name
 
 **Status Codes:**
 - `200` - Success
