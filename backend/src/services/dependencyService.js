@@ -1,3 +1,4 @@
+import dotenv from 'dotenv';
 import { 
   REGEX_PATTERNS, 
   BUILTIN_MODULES, 
@@ -7,6 +8,14 @@ import {
   TEST_FILE_PATTERNS,
   getLanguageFromExtension
 } from '../config/parserConfig.js';
+import githubService from './githubService.js';
+
+dotenv.config();
+
+// Default concurrency for parallel file fetching
+const FETCH_CONCURRENCY = process.env.FETCH_CONCURRENCY 
+  ? parseInt(process.env.FETCH_CONCURRENCY) 
+  : 20;
 
 // Helper to add unique dependencies
 function addDependency(dependencies, seen, module, type) {
@@ -398,7 +407,6 @@ function extractFilesByLanguage(tree, language = 'all', options = {}) {
 
 /**
  * Analyze dependencies for a repository
- * @param {Object} githubService - GitHub service instance
  * @param {string} owner - Repository owner
  * @param {string} repo - Repository name
  * @param {string} branch - Branch name
@@ -408,7 +416,7 @@ function extractFilesByLanguage(tree, language = 'all', options = {}) {
  * @param {boolean} options.includeTests - Whether to include test files (default: false)
  * @returns {Object} Analysis result with tree, parsedFiles, and metadata
  */
-async function analyzeDependencies(githubService, owner, repo, branch, options = {}) {
+async function analyzeDependencies(owner, repo, branch, options = {}) {
   const { maxFiles = 1000, language = 'all', includeTests = false } = options;
   
   try {
@@ -421,10 +429,20 @@ async function analyzeDependencies(githubService, owner, repo, branch, options =
     
     console.log(`Found ${allCodeFiles.length} files${includeTests ? '' : ' (excluding tests)'}, analyzing ${filesToAnalyze.length}`);
     
+    // Fetch all files in parallel for much faster analysis
+    const startTime = Date.now();
+    const fileContents = await githubService.getFilesParallel(
+      owner, 
+      repo, 
+      filesToAnalyze, 
+      branch,
+      { concurrency: FETCH_CONCURRENCY }
+    );
+    console.log(`⚡ Fetched ${fileContents.size} files in ${Date.now() - startTime}ms (concurrency: ${FETCH_CONCURRENCY})`);
+    
     // Parse all files
     const parsedFiles = [];
-    for (const filePath of filesToAnalyze) {
-      const content = await githubService.getFile(owner, repo, filePath, branch);
+    for (const [filePath, content] of fileContents) {
       const parsed = parseFile(content, filePath);
       parsedFiles.push(parsed);
     }

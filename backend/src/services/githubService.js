@@ -216,10 +216,57 @@ async function getRepoInfo(owner, repo) {
   };
 }
 
+/**
+ * Fetch multiple files in parallel with controlled concurrency
+ * @param {string} owner - Repository owner
+ * @param {string} repo - Repository name
+ * @param {string[]} filePaths - Array of file paths to fetch
+ * @param {string} branch - Branch name
+ * @param {Object} options - Options
+ * @param {number} options.concurrency - Max concurrent requests (default: 10)
+ * @returns {Promise<Map<string, string>>} Map of filePath -> content
+ */
+async function getFilesParallel(owner, repo, filePaths, branch = '', options = {}) {
+  const { concurrency = 10 } = options;
+  const results = new Map();
+  const errors = [];
+  
+  // Process files in batches to control concurrency
+  for (let i = 0; i < filePaths.length; i += concurrency) {
+    const batch = filePaths.slice(i, i + concurrency);
+    
+    const batchPromises = batch.map(async (filePath) => {
+      try {
+        const content = await getFile(owner, repo, filePath, branch);
+        return { filePath, content, success: true };
+      } catch (error) {
+        return { filePath, error: error.message, success: false };
+      }
+    });
+    
+    const batchResults = await Promise.all(batchPromises);
+    
+    for (const result of batchResults) {
+      if (result.success) {
+        results.set(result.filePath, result.content);
+      } else {
+        errors.push({ path: result.filePath, error: result.error });
+      }
+    }
+  }
+  
+  if (errors.length > 0) {
+    console.warn(`⚠️  Failed to fetch ${errors.length} files:`, errors.slice(0, 5).map(e => e.path));
+  }
+  
+  return results;
+}
+
 const githubService = {
   getContent,
   getRepoTree,
   getFile,
+  getFilesParallel,
   getAllBranches,
   getDefaultBranch,
   getAllCommits,

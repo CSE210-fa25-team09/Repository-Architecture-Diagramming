@@ -49,7 +49,6 @@ graphRouter.get('/api/analyzeRepo', async (req, res) => {
 
     // Analyze dependencies (excludes test files by default)
     const result = await dependencyService.analyzeDependencies(
-      githubService, 
       owner, 
       repo, 
       queryBranch, 
