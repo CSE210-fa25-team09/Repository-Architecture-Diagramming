@@ -234,21 +234,24 @@ function renderFolderSubgraphs(hierarchy, getSubgraphId, indent = 1) {
 }
 
 /**
- * Renders external/builtin nodes (not in any folder)
+ * Renders external/builtin nodes grouped in a subgraph
  */
 function renderExternalNodes(nodes, renderedNodes) {
   const lines = [];
-  const externalNodes = [];
+  const externalNodeLines = [];
 
   for (const [nodeId, node] of nodes) {
     if (!renderedNodes.has(nodeId) && node.folderPath === null) {
-      externalNodes.push(`    ${nodeId}["${sanitizeLabel(node.label)}"]`);
+      externalNodeLines.push(`        ${nodeId}["${sanitizeLabel(node.label)}"]`);
       renderedNodes.add(nodeId);
     }
   }
 
-  if (externalNodes.length > 0) {
-    lines.push('', '    %% External/Builtin Dependencies', ...externalNodes);
+  if (externalNodeLines.length > 0) {
+    lines.push('');
+    lines.push('    subgraph external_deps["📦 External Dependencies"]');
+    lines.push(...externalNodeLines);
+    lines.push('    end');
   }
 
   return lines;
@@ -256,9 +259,31 @@ function renderExternalNodes(nodes, renderedNodes) {
 
 /**
  * Renders edges as Mermaid arrows
+ * Internal deps: solid black arrows (-->)
+ * External deps: dotted grey arrows (-.->)
+ * Returns both edge lines and indices of external edges for styling
  */
-function renderEdges(edges) {
-  return ['', '    %% Dependencies', ...edges.map(e => `    ${e.sourceId} --> ${e.targetId}`)];
+function renderEdges(edges, nodes) {
+  const lines = ['', '    %% Dependencies'];
+  const externalIndices = [];
+  let edgeIndex = 0;
+  
+  for (const edge of edges) {
+    const targetNode = nodes.get(edge.targetId);
+    const isExternal = targetNode && (targetNode.type === 'external' || targetNode.type === 'builtin');
+    
+    if (isExternal) {
+      // Dotted line for external dependencies
+      lines.push(`    ${edge.sourceId} -.-> ${edge.targetId}`);
+      externalIndices.push(edgeIndex);
+    } else {
+      // Solid line for internal dependencies
+      lines.push(`    ${edge.sourceId} --> ${edge.targetId}`);
+    }
+    edgeIndex++;
+  }
+  
+  return { lines, externalIndices };
 }
 
 /**
@@ -286,13 +311,28 @@ function renderStyles(nodeStyles) {
 
 /**
  * Renders a simple flat graph (no folder grouping)
+ * Returns both edge lines and indices of external edges for styling
  */
 function renderFlatGraph(nodes, edges) {
-  return edges.map(edge => {
+  const lines = [];
+  const externalIndices = [];
+  let edgeIndex = 0;
+  
+  for (const edge of edges) {
     const source = nodes.get(edge.sourceId);
     const target = nodes.get(edge.targetId);
-    return `    ${edge.sourceId}["${sanitizeLabel(source.label)}"] --> ${edge.targetId}["${sanitizeLabel(target.label)}"]`;
-  });
+    const isExternal = target && (target.type === 'external' || target.type === 'builtin');
+    const arrow = isExternal ? '-.->' : '-->';
+    
+    lines.push(`    ${edge.sourceId}["${sanitizeLabel(source.label)}"] ${arrow} ${edge.targetId}["${sanitizeLabel(target.label)}"]`);
+    
+    if (isExternal) {
+      externalIndices.push(edgeIndex);
+    }
+    edgeIndex++;
+  }
+  
+  return { lines, externalIndices };
 }
 
 // =============================================================================
@@ -322,6 +362,7 @@ function generateStyledMermaidFlowchart(tree, options = {}) {
   const lines = [`graph ${direction}`];
 
   // Step 3: Render nodes (grouped by folder or flat)
+  let externalEdgeIndices = [];
   if (groupByFolder && nodes.size > 0) {
     const { getSubgraphId } = createSubgraphIdGenerator();
     const hierarchy = buildFolderHierarchy(nodes);
@@ -329,14 +370,22 @@ function generateStyledMermaidFlowchart(tree, options = {}) {
     
     lines.push(...subgraphLines);
     lines.push(...renderExternalNodes(nodes, renderedNodes));
-    lines.push(...renderEdges(edges));
+    const { lines: edgeLines, externalIndices } = renderEdges(edges, nodes);
+    lines.push(...edgeLines);
+    externalEdgeIndices = externalIndices;
   } else {
-    lines.push(...renderFlatGraph(nodes, edges));
+    const { lines: flatLines, externalIndices } = renderFlatGraph(nodes, edges);
+    lines.push(...flatLines);
+    externalEdgeIndices = externalIndices;
   }
 
   // Step 4: Add styling classes
   if (styled) {
     lines.push(...renderStyles(nodeStyles));
+    // Add grey color only for external dependency links
+    if (externalEdgeIndices.length > 0) {
+      lines.push(`    linkStyle ${externalEdgeIndices.join(',')} stroke:#999,stroke-width:1px`);
+    }
   }
 
   return lines.join('\n');
