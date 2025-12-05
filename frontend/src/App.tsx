@@ -26,9 +26,7 @@ function App() {
         <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-8 px-4 py-8">
           <Header
             isDark={isDark}
-            onToggleTheme={() =>
-              setTheme((prev) => (prev === "dark" ? "light" : "dark"))
-            }
+            onToggleTheme={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
           />
           <Separator className="bg-[color:var(--panel-border)]" />
           <Routes>

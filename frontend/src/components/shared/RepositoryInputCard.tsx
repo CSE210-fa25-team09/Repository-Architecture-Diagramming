@@ -53,7 +53,8 @@ export default function RepositoryInputCard() {
           const entry: Repo = {
             id: workspace.repo.name,
             name: workspace.repo.name,
-            description: workspace.repo.description ?? "Repository diagram",
+            description: workspace.repo.description ?? "No description provided.",
+            url: repoUrl,
           }
 
           const stored = window.localStorage.getItem(HISTORY_STORAGE_KEY)
@@ -65,7 +66,8 @@ export default function RepositoryInputCard() {
               if (Array.isArray(parsed)) {
                 existing = parsed as Repo[]
               }
-            } catch {
+            } catch (parseErr) {
+              console.error("Failed to parse repo history from localStorage:", parseErr)
             }
           }
 

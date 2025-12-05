@@ -5,6 +5,8 @@ import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/ca
 import { Button } from "@/components/ui/button"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import type { Repo } from "@/lib/repoData"
+import { fetchInitialWorkspace } from "@/api/diagram"
+import { useWorkspace } from "@/lib/workspaceContext"
 
 type HistorySectionProps = {
   history: Repo[]
@@ -16,6 +18,7 @@ const ROW_VISIBLE = 4
 export function HistorySection({ history, onRepoClick }: HistorySectionProps) {
   const [expanded, setExpanded] = useState(false)
   const navigate = useNavigate()
+  const { setWorkspaceForRepo, setCurrentRepoKey } = useWorkspace()
 
   if (history.length === 0) {
     return (
@@ -32,11 +35,20 @@ export function HistorySection({ history, onRepoClick }: HistorySectionProps) {
   const extraRepos = history.slice(ROW_VISIBLE)
   const hasMore = extraRepos.length > 0
 
-  const handleCardClick = (repo: Repo) => {
+  const handleCardClick = async (repo: Repo) => {
     onRepoClick?.(repo)
-
     // Assume repo.id is the identifier we used originally when generating the workspace
-    const identifier = repo.id || repo.name
+    const identifier = repo.url
+
+    try {
+      const ws = await fetchInitialWorkspace(identifier)
+      setWorkspaceForRepo(ws.repo.name, ws)
+      setCurrentRepoKey(ws.repo.name)
+    } catch (err) {
+      // Prefetch failures are logged but navigation still proceeds
+      console.error("Failed to prefetch workspace for history repo", err)
+    }
+
     navigate(`/diagram?repo=${encodeURIComponent(identifier)}`)
   }
 

@@ -22,7 +22,7 @@ import {
   fetchRepoTree,
   fetchInitialWorkspace,
 } from "@/api/diagram"
-import { formatLastGenerated, repoTreeToAscii } from "@/lib/utils"
+import { formatLastGenerated, normalizeRepoParam, repoTreeToAscii } from "@/lib/utils"
 import { NotFound } from "@/pages/NotFound"
 
 type BranchId = string
@@ -47,12 +47,14 @@ export function Diagram() {
   const [repoName, setRepoName] = useState(workspace?.repo?.name ?? "")
   const [repoSummary, setRepoSummary] = useState(workspace?.repo?.description ?? "")
 
+  const repoKeyFromParam = useMemo(() => normalizeRepoParam(repoParam), [repoParam])
+
   const repoUrl = useMemo(() => {
     const decoded = decodeURIComponent(repoParam || "")
     if (decoded.startsWith("http")) return decoded
-    const baseName = repoName || decoded
+    const baseName = repoKeyFromParam || repoName || decoded
     return baseName ? `https://github.com/${baseName}` : ""
-  }, [repoParam, repoName])
+  }, [repoKeyFromParam, repoParam, repoName])
 
   useEffect(() => {
     if (workspace?.repo) {
@@ -70,6 +72,29 @@ export function Diagram() {
 
   const repoKey = workspace?.repo?.name ?? null
 
+  // Keep the workspace context aligned with the current ?repo param and clear
+  // any stale branch data when switching repos.
+  useEffect(() => {
+    if (!repoKeyFromParam) return
+    if (workspace?.repo?.name !== repoKeyFromParam) {
+      setCurrentRepoKey(repoKeyFromParam)
+      setBranchDetails({} as BranchLibrary)
+      setBranches([])
+      setPanels(DEFAULT_DIAGRAMS)
+      setRepoName(repoKeyFromParam)
+      setRepoSummary("")
+    }
+  }, [
+    repoKeyFromParam,
+    setBranchDetails,
+    setBranches,
+    setCurrentRepoKey,
+    setRepoSummary,
+    setRepoName,
+    setPanels,
+    workspace,
+  ])
+
   useEffect(() => {
     if (workspace?.repo?.name) {
       setCurrentRepoKey(workspace.repo.name)
@@ -84,8 +109,8 @@ export function Diagram() {
 
   // Initialize workspace from ?repo=
   useEffect(() => {
-    if (workspace) return
-    if (!repoParam) return
+    if (!repoParam || !repoKeyFromParam) return
+    if (workspace && workspace.repo?.name === repoKeyFromParam) return
 
     let mounted = true
 
@@ -110,7 +135,17 @@ export function Diagram() {
     return () => {
       mounted = false
     }
-  }, [workspace, setCurrentRepoKey, setWorkspaceForRepo, repoParam])
+  }, [
+    workspace,
+    setCurrentRepoKey,
+    setWorkspaceForRepo,
+    repoParam,
+    repoKeyFromParam,
+    setRepoName,
+    setRepoSummary,
+    setBranches,
+    setBranchDetails,
+  ])
 
   const ensureBranchData = useCallback(
     async (branchId: string) => {

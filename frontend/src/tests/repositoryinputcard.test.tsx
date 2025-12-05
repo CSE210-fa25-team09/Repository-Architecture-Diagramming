@@ -1,15 +1,8 @@
-import { describe, it, expect, vi, afterEach } from "vitest"
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  within,
-  cleanup,
-} from "@testing-library/react"
-import { MemoryRouter } from "react-router-dom"
-import { Home } from "@/pages/Home"
 import { WorkspaceProvider } from "@/lib/workspaceContext"
+import { Home } from "@/pages/Home"
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { MemoryRouter } from "react-router-dom"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 const mockNavigate = vi.fn()
 vi.mock("react-router-dom", async (importOriginal) => {
@@ -26,21 +19,6 @@ vi.mock("@/api/diagram", () => ({
     branches: [],
   }),
 }))
-
-const createMockFile = (name: string, size: number, mimeType: string) => {
-  const file = new File(["content"], name, { type: mimeType })
-  Object.defineProperty(file, "size", { value: size })
-  return file
-}
-function getFormElements() {
-  // Finds the form element using the data-testid and selects the first instance [0]
-  const formElement = screen.getAllByTestId("repo-input-form")[0]
-  // Finds the submit button scoped within that form instance
-  const submitButton = within(formElement).getByRole("button", {
-    name: /Generate Diagram/i,
-  })
-  return { formElement, submitButton }
-}
 
 function renderHome() {
   return render(
@@ -97,43 +75,8 @@ describe("Home Component (Integration Test)", () => {
     fireEvent.click(submitButton)
 
     // Assert: Check for the error message's presence
-    const errorMessage = screen.getByText(
-      /Please enter a valid GitHub repo URL or upload a .zip file./i,
-    )
+    const errorMessage = screen.getByText(/Please enter a valid GitHub repo URL./i)
     expect(errorMessage).toBeTruthy()
     expect(mockNavigate).not.toHaveBeenCalled()
-  })
-
-  // --- Test 3: Successful Zip File Submission ---
-  it("allows for navigation via zip file upload", async () => {
-    renderHome()
-
-    const mockZipFile = createMockFile("full-test.zip", 2048, "application/zip")
-
-    // Get the submit button from the single, correct form instance
-    const { submitButton } = getFormElements()
-
-    // 1. Get the hidden file input element by its ID (must be outside the form scope)
-    const zipInput = document.getElementById("zip-upload") as HTMLInputElement | null
-
-    if (!zipInput) throw new Error("Zip input not found for testing")
-
-    // Simulate User Interaction:
-    // Directly simulate the 'change' event on the hidden input to set the component's state.
-    fireEvent.change(zipInput, { target: { files: [mockZipFile] } })
-
-    // Wait for the state to update after the file change event
-    await waitFor(() => {
-      expect(zipInput.files?.length).toBe(1)
-    })
-
-    // 2. Submit the form by clicking the submit button.
-    fireEvent.click(submitButton)
-
-    // Assert: Check navigation
-    const expectedRoute = `/diagram?zip=${encodeURIComponent(mockZipFile.name)}`
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith(expectedRoute)
-    })
   })
 })

@@ -5,6 +5,8 @@ import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/ca
 import { Button } from "@/components/ui/button"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import type { Repo } from "@/lib/repoData"
+import { fetchInitialWorkspace } from "@/api/diagram"
+import { useWorkspace } from "@/lib/workspaceContext"
 
 type SampleSectionProps = {
   repos?: Repo[]
@@ -13,17 +15,10 @@ type SampleSectionProps = {
 
 const ROW_VISIBLE = 4
 
-const SAMPLE_ID_TO_URL: Record<string, string> = {
-  "our-repo":
-    "https://github.com/CSE210-fa25-team09/Repository-Architecture-Diagramming",
-  fastapi: "https://github.com/tiangolo/fastapi",
-  "call-center-ai": "https://github.com/microsoft/call-center-ai",
-  verl: "https://github.com/volcengine/verl",
-}
-
 export function SampleSection({ repos = [], onRepoClick }: SampleSectionProps) {
   const [expanded, setExpanded] = useState(false)
   const navigate = useNavigate()
+  const { setWorkspaceForRepo, setCurrentRepoKey } = useWorkspace()
 
   if (repos.length === 0) {
     return (
@@ -38,12 +33,20 @@ export function SampleSection({ repos = [], onRepoClick }: SampleSectionProps) {
   const extraRepos = repos.slice(ROW_VISIBLE)
   const hasMore = extraRepos.length > 0
 
-  const handleCardClick = (repo: Repo) => {
+  const handleCardClick = async (repo: Repo) => {
     onRepoClick?.(repo)
 
-    const url = SAMPLE_ID_TO_URL[repo.id]
     // Fallback if someone adds a new sample without updating the map
-    const identifier = url ?? repo.name
+    const identifier = repo.url
+
+    try {
+      const ws = await fetchInitialWorkspace(identifier)
+      setWorkspaceForRepo(ws.repo.name, ws)
+      setCurrentRepoKey(ws.repo.name)
+    } catch (err) {
+      // Prefetch failures are logged but navigation still proceeds
+      console.error("Failed to prefetch workspace for sample repo", err)
+    }
 
     navigate(`/diagram?repo=${encodeURIComponent(identifier)}`)
   }

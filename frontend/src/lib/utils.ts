@@ -54,3 +54,37 @@ export function formatLastGenerated(timestamp: number | undefined): string {
 
   return `Generated at ${new Date(tsMs).toLocaleString()}`
 }
+
+export function normalizeRepoParam(param: string | null): string | null {
+  if (!param) return null
+
+  let decoded = param
+  try {
+    decoded = decodeURIComponent(param)
+  } catch {
+    decoded = param
+  }
+
+  let trimmed = decoded.trim()
+  if (!trimmed) return null
+  if (trimmed.endsWith("/")) trimmed = trimmed.slice(0, -1)
+
+  if (trimmed.startsWith("http")) {
+    try {
+      const url = new URL(trimmed)
+      if (url.hostname === "github.com") {
+        const [owner, repo] = url.pathname.replace(/^\/+/, "").split("/")
+        if (owner && repo) return `${owner}/${repo}`
+      }
+    } catch {
+      /* noop */
+    }
+  }
+
+  const parts = trimmed.split("/")
+  if (parts.length >= 2 && parts[0] && parts[1]) {
+    return `${parts[0]}/${parts[1]}`
+  }
+
+  return null
+}
