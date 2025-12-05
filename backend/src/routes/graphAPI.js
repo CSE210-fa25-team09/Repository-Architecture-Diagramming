@@ -80,7 +80,7 @@ graphRouter.get('/api/analyzeRepo', async (req, res) => {
     
     cacheService.set(cacheKey, cacheData);
 
-    console.log(`✅ Generated diagrams for ${owner}/${repo} (${queryBranch}@${commitSha})`);
+    console.log(`Generated diagrams for ${owner}/${repo} (${queryBranch}@${commitSha})`);
 
     res.json({
       allDependencies,
@@ -92,7 +92,7 @@ graphRouter.get('/api/analyzeRepo', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('❌ Error:', err.message);
+    console.error('Error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
