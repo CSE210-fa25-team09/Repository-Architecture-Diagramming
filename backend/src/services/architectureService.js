@@ -1,75 +1,58 @@
-import repoMetadataService, { parseGithubUrl as parseGithubRepoUrl } from './repoMetadataService.js';
+import githubService from './githubService.js';
 import llmService from './llmService.js';
 import cacheService from './cacheService.js';
+import { UserInputError } from '../const/errors.js';
 
-class UserInputError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = 'UserInputError';
-    this.statusCode = 400;
+async function generateArchitectureDiagram({ repoUrl, branch }) {
+  if (!repoUrl || typeof repoUrl !== 'string' || repoUrl.trim() === '') {
+    throw new UserInputError('The "repoUrl" field is required.');
   }
-}
 
-function createArchitectureService({ metadataService = repoMetadataService, llm = llmService, cache = cacheService } = {}) {
-  async function generateArchitectureDiagram({ repoUrl, branch }) {
-    if (!repoUrl || typeof repoUrl !== 'string' || repoUrl.trim() === '') {
-      throw new UserInputError('The "repoUrl" field is required.');
-    }
+  const metadata = await githubService.fetchRepoMetadata({
+    githubUrl: repoUrl,
+    branch
+  });
 
-    const metadata = await metadataService.fetchRepoMetadata({
-      githubUrl: repoUrl,
-      branch
-    });
+  const commitSha = metadata.latestCommit.sha || 'latest';
+  const cacheKey = cacheService.buildArchitectureKey(metadata.owner, metadata.repo, metadata.branch, commitSha);
+  
+  const cachedResult = cacheService.get(cacheKey);
+  if (cachedResult) {
+    return cachedResult;
+  }
 
-    const commitSha = metadata.latestCommit.sha || 'latest';
-    const cacheKey = cache.buildArchitectureKey(metadata.owner, metadata.repo, metadata.branch, commitSha);
-    
-    const cachedResult = cache.get(cacheKey);
-    if (cachedResult) {
-      return cachedResult;
-    }
+  const llmResult = await llmService.generateArchitectureDiagram(metadata);
 
-    const llmResult = await llm.generateArchitectureDiagram(metadata);
-
-    const result = {
-      diagram: llmResult.diagram,
-      metadata: {
-        ...metadata,
-        llm: {
-          provider: llmResult.provider,
-          cached: false
-        }
-      },
-      rawLlmResponse: llmResult.rawResponse,
-      prompt: llmResult.prompt,
-      systemPrompt: llmResult.systemPrompt
-    };
-
-    // Store in Cache with cached flag set to true
-    const resultToCache = {
-      ...result,
-      metadata: {
-        ...result.metadata,
-        llm: { ...result.metadata.llm, cached: true }
+  const result = {
+    diagram: llmResult.diagram,
+    metadata: {
+      ...metadata,
+      llm: {
+        provider: llmResult.provider,
+        cached: false
       }
-    };
-    
-    cache.set(cacheKey, resultToCache);
-
-    return result;
-  }
-
-  return {
-    generateArchitectureDiagram,
-    parseGithubUrl: parseGithubRepoUrl
+    },
+    rawLlmResponse: llmResult.rawResponse,
+    prompt: llmResult.prompt,
+    systemPrompt: llmResult.systemPrompt
   };
+
+  // Store in Cache with cached flag set to true
+  const resultToCache = {
+    ...result,
+    metadata: {
+      ...result.metadata,
+      llm: { ...result.metadata.llm, cached: true }
+    }
+  };
+  
+  cacheService.set(cacheKey, resultToCache);
+
+  return result;
 }
 
-const architectureService = createArchitectureService();
+const architectureService = {
+  generateArchitectureDiagram
+}
 
 export default architectureService;
-export {
-  createArchitectureService,
-  UserInputError,
-  parseGithubRepoUrl as parseGithubUrl
-};

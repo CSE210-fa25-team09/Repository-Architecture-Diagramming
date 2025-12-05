@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import llmService from '../src/services/llmService.js';
-import repoMetadataService from '../src/services/repoMetadataService.js';
+import githubService from '../src/services/githubService.js';
 
 global.fetch = jest.fn();
 
@@ -10,7 +10,7 @@ describe('LLM Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     
-    jest.spyOn(repoMetadataService, 'formatMetadataForPrompt').mockReturnValue('Mock Prompt');
+    jest.spyOn(githubService, 'formatMetadataForPrompt').mockReturnValue('Mock Prompt');
 
     process.env.LLM_PROVIDER = 'huggingface';
     process.env.LLM_API_KEY = 'mock_key';

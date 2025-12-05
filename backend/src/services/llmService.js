@@ -2,8 +2,8 @@
  * LLM service that turns repository metadata into architecture diagrams.
  */
 
-import repoMetadataService from './repoMetadataService.js';
-import { RepoMetadataError } from './repoMetadataService.js';
+import githubService from './githubService.js';
+import { RepoMetadataError, LlmProviderError } from '../const/errors.js';
 
 const Provider = {
   HUGGING_FACE: 'huggingface',
@@ -32,15 +32,6 @@ Rules:
 function parseEnvInt(value, fallback) {
   const parsed = Number.parseInt(value, 10);
   return Number.isNaN(parsed) ? fallback : parsed;
-}
-
-export class LlmProviderError extends Error {
-  constructor(message, statusCode = 502, details) {
-    super(message);
-    this.name = 'LlmProviderError';
-    this.statusCode = statusCode;
-    this.details = details;
-  }
 }
 
 function resolveProvider() {
@@ -206,7 +197,7 @@ export async function generateArchitectureDiagram(metadata, options = {}) {
   }
 
   const systemPrompt = resolveSystemPrompt(options.systemPrompt);
-  const userPrompt = repoMetadataService.formatMetadataForPrompt(metadata);
+  const userPrompt = githubService.formatMetadataForPrompt(metadata);
   const providerResponse = await dispatchToProvider({ systemPrompt, userPrompt });
   const diagram = extractMermaidDiagram(providerResponse.text);
 

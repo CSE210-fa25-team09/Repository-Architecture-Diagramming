@@ -7,7 +7,8 @@ import {
   TEST_DIR_PATTERNS,
   TEST_FILE_PATTERNS,
   getLanguageFromExtension
-} from '../config/parserConfig.js';
+} from '../const/parserConfig.js';
+import { UserInputError } from '../const/errors.js';
 import githubService from './githubService.js';
 
 dotenv.config();
@@ -363,7 +364,7 @@ function extractFilesByLanguage(tree, language = 'all', options = {}) {
   } else if (FILE_EXTENSIONS[language]) {
     targetExtensions = FILE_EXTENSIONS[language];
   } else {
-    throw new Error(`Unknown language: ${language}. Use 'jsts', 'cpp', 'python', 'java', 'go', or 'all'`);
+    throw new UserInputError(`Unknown language: ${language}. Use 'jsts', 'cpp', 'python', 'java', 'go', or 'all'`);
   }
   
   // BFS traversal to prioritize files at shallower depths
