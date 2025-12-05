@@ -13,6 +13,14 @@ type SampleSectionProps = {
 
 const ROW_VISIBLE = 4
 
+const SAMPLE_ID_TO_URL: Record<string, string> = {
+  "our-repo":
+    "https://github.com/CSE210-fa25-team09/Repository-Architecture-Diagramming",
+  fastapi: "https://github.com/tiangolo/fastapi",
+  "call-center-ai": "https://github.com/microsoft/call-center-ai",
+  verl: "https://github.com/volcengine/verl",
+}
+
 export function SampleSection({ repos = [], onRepoClick }: SampleSectionProps) {
   const [expanded, setExpanded] = useState(false)
   const navigate = useNavigate()
@@ -32,7 +40,12 @@ export function SampleSection({ repos = [], onRepoClick }: SampleSectionProps) {
 
   const handleCardClick = (repo: Repo) => {
     onRepoClick?.(repo)
-    navigate(`/sample/${repo.id}`)
+
+    const url = SAMPLE_ID_TO_URL[repo.id]
+    // Fallback if someone adds a new sample without updating the map
+    const identifier = url ?? repo.name
+
+    navigate(`/diagram?repo=${encodeURIComponent(identifier)}`)
   }
 
   return (

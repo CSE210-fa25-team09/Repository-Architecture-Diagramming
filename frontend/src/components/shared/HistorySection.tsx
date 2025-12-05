@@ -33,10 +33,11 @@ export function HistorySection({ history, onRepoClick }: HistorySectionProps) {
   const hasMore = extraRepos.length > 0
 
   const handleCardClick = (repo: Repo) => {
-    // keep any existing callback behavior
     onRepoClick?.(repo)
-    // NEW: navigate to history route
-    navigate(`/history/${repo.id}`)
+
+    // Assume repo.id is the identifier we used originally when generating the workspace
+    const identifier = repo.id || repo.name
+    navigate(`/diagram?repo=${encodeURIComponent(identifier)}`)
   }
 
   return (

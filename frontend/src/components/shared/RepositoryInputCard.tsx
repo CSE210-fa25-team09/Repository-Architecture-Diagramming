@@ -9,6 +9,9 @@ import { useNavigate } from "react-router-dom"
 import { fetchInitialWorkspace } from "@/api/diagram"
 import { useWorkspace } from "@/lib/workspaceContext"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+import { SAMPLE_REPOS, type Repo } from "@/lib/repoData"
+
+const HISTORY_STORAGE_KEY = "repo-history"
 
 export default function RepositoryInputCard() {
   const navigate = useNavigate()
@@ -43,12 +46,37 @@ export default function RepositoryInputCard() {
     setLoading(true)
     try {
       const workspace = await fetchInitialWorkspace(repoIdentifier)
-
-      // Store in global context
       setWorkspaceForRepo(workspace.repo.name, workspace)
       setCurrentRepoKey(workspace.repo.name)
+      try {
+        if (typeof window !== "undefined") {
+          const entry: Repo = {
+            id: workspace.repo.name,
+            name: workspace.repo.name,
+            description: workspace.repo.description ?? "Repository diagram",
+          }
 
-      // Navigate to diagram page
+          const stored = window.localStorage.getItem(HISTORY_STORAGE_KEY)
+          let existing: Repo[] = []
+
+          if (stored) {
+            try {
+              const parsed = JSON.parse(stored)
+              if (Array.isArray(parsed)) {
+                existing = parsed as Repo[]
+              }
+            } catch {
+            }
+          }
+
+          const without = existing.filter((r) => r.id !== entry.id)
+          const updated = [entry, ...without].slice(0, SAMPLE_REPOS.length)
+
+          window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated))
+        }
+      } catch (historyErr) {
+        console.error("Failed to update repo history from input card:", historyErr)
+      }
       const route = `/diagram?repo=${encodeURIComponent(repoUrl)}`
       navigate(route)
     } catch (err) {
