@@ -27,7 +27,7 @@ function sanitizeMermaidDiagram(diagram) {
   // Pattern: nodeId[[[label]]] -> nodeId[[label]]
   sanitized = sanitized.replace(/(\w+)\[\[\[([^\]]*)\]\]\]/g, '$1[[$2]]');
   // Pattern: nodeId[>label]] -> nodeId>label]
-  sanitized = sanitized.replace(/(\w+)\[\>([^\]]*)\]\]/g, '$1>$2]');
+  sanitized = sanitized.replace(/(\w+)\[>([^\]]*)\]\]/g, '$1>$2]');
 
   // Fix 0b: Replace reserved keywords used as STANDALONE node IDs only
   // Must be done first before other transformations
