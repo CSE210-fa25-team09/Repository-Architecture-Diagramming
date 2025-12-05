@@ -2,6 +2,7 @@
 jest.mock('../src/services/githubService.js');
 
 import dependencyService from '../src/services/dependencyService.js';
+import { parseFile } from '../src/utils/parser.js';
 import githubService from '../src/services/githubService.js';
 
 describe('Dependency Service Tests', () => {
@@ -37,7 +38,7 @@ const utils = require('./utils');
 import { data } from './data/mock';`;
     const filePath = 'src/App.js';
 
-    const result = dependencyService.parseFile(content, filePath);
+    const result = parseFile(content, filePath);
 
     expect(result.filePath).toBe('src/App.js');
     expect(result.dependencies).toHaveLength(3);
@@ -54,7 +55,7 @@ from flask import Flask
 import local_module`;
     const filePath = 'app.py';
 
-    const result = dependencyService.parseFile(content, filePath);
+    const result = parseFile(content, filePath);
 
     expect(result.dependencies).toEqual(expect.arrayContaining([
         expect.objectContaining({ module: 'os', type: 'builtin' }),
@@ -72,7 +73,7 @@ import org.springframework.boot.SpringApplication;
 import com.example.project.Helper;`;
     const filePath = 'src/main/java/com/example/App.java';
 
-    const result = dependencyService.parseFile(content, filePath);
+    const result = parseFile(content, filePath);
 
     expect(result.dependencies).toEqual(expect.arrayContaining([
         expect.objectContaining({ module: 'java.util', type: 'builtin' }),
@@ -88,7 +89,7 @@ import com.example.project.Helper;`;
 #include "utils/helper.hpp"`;
     const filePath = 'src/main.cpp';
 
-    const result = dependencyService.parseFile(content, filePath);
+    const result = parseFile(content, filePath);
 
     expect(result.dependencies).toEqual(expect.arrayContaining([
         expect.objectContaining({ module: 'iostream', type: 'builtin' }),
@@ -107,7 +108,7 @@ import (
 )`;
     const filePath = 'main.go';
 
-    const result = dependencyService.parseFile(content, filePath);
+    const result = parseFile(content, filePath);
 
     expect(result.dependencies).toEqual(expect.arrayContaining([
         expect.objectContaining({ module: 'fmt', type: 'builtin' }),

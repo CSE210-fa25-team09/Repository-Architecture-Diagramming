@@ -1,11 +1,6 @@
-/**
- * LLM service that turns repository metadata into architecture diagrams.
- */
-
-import githubService from './githubService.js';
+import { sanitizeMermaidDiagram } from '../utils/sanitizer.js';
 import { RepoMetadataError, LlmProviderError } from '../const/errors.js';
 import { 
-  DEFAULT_SYSTEM_PROMPT, 
   CODE_ANALYSIS_SYSTEM_PROMPT, 
   DETAILED_DIAGRAM_SYSTEM_PROMPT 
 } from '../const/prompts.js';
@@ -22,10 +17,6 @@ function parseEnvInt(value, fallback) {
 
 function resolveProvider() {
   return (process.env.LLM_PROVIDER || Provider.HUGGING_FACE).toLowerCase();
-}
-
-function resolveSystemPrompt(override) {
-  return override || process.env.LLM_SYSTEM_PROMPT || DEFAULT_SYSTEM_PROMPT;
 }
 
 function extractMermaidDiagram(text) {
@@ -197,26 +188,6 @@ async function dispatchToProvider({ systemPrompt, userPrompt }) {
   return callHuggingFace({ systemPrompt, userPrompt });
 }
 
-export async function generateArchitectureDiagram(metadata, options = {}) {
-  if (!metadata) {
-    throw new RepoMetadataError('Repository metadata is required before calling the LLM.');
-  }
-
-  const systemPrompt = resolveSystemPrompt(options.systemPrompt);
-  const userPrompt = githubService.formatMetadataForPrompt(metadata);
-  const providerResponse = await dispatchToProvider({ systemPrompt, userPrompt });
-  const diagram = extractMermaidDiagram(providerResponse.text);
-
-  return {
-    diagram,
-    provider: resolveProvider(),
-    rawResponse: providerResponse.raw,
-    usage: providerResponse.usage,
-    prompt: userPrompt,
-    systemPrompt
-  };
-}
-
 /**
  * Analyze source code to understand architecture (Step 1 of detailed analysis)
  * @param {Map<string, string>} fileContents - Map of file paths to their contents
@@ -318,7 +289,8 @@ Create a detailed Mermaid architecture diagram that includes ALL components from
     userPrompt
   });
 
-  const diagram = extractMermaidDiagram(providerResponse.text);
+  const rawDiagram = extractMermaidDiagram(providerResponse.text);
+  const diagram = sanitizeMermaidDiagram(rawDiagram);
 
   return {
     diagram,
@@ -331,7 +303,6 @@ Create a detailed Mermaid architecture diagram that includes ALL components from
 }
 
 const llmService = {
-  generateArchitectureDiagram,
   analyzeCodeArchitecture,
   generateDetailedDiagram
 };
