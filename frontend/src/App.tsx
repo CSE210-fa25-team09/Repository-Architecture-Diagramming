@@ -12,7 +12,6 @@ function App() {
   const [theme, setTheme] = useState<Theme>(() => getSystemTheme())
   const isDark = theme === "dark"
 
-  // Sync with system preference so the UI stays in step with OS theme toggles.
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)")
     const listener = (event: MediaQueryListEvent) =>

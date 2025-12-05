@@ -1,9 +1,12 @@
 // src/pages/HistorySection.tsx
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import type { Repo } from "@/lib/repoData"
+import { fetchInitialWorkspace } from "@/api/diagram"
+import { useWorkspace } from "@/lib/workspaceContext"
 
 type HistorySectionProps = {
   history: Repo[]
@@ -14,6 +17,8 @@ const ROW_VISIBLE = 4
 
 export function HistorySection({ history, onRepoClick }: HistorySectionProps) {
   const [expanded, setExpanded] = useState(false)
+  const navigate = useNavigate()
+  const { setWorkspaceForRepo, setCurrentRepoKey } = useWorkspace()
 
   if (history.length === 0) {
     return (
@@ -29,6 +34,23 @@ export function HistorySection({ history, onRepoClick }: HistorySectionProps) {
   const primaryRepos = history.slice(0, ROW_VISIBLE)
   const extraRepos = history.slice(ROW_VISIBLE)
   const hasMore = extraRepos.length > 0
+
+  const handleCardClick = async (repo: Repo) => {
+    onRepoClick?.(repo)
+    // Assume repo.id is the identifier we used originally when generating the workspace
+    const identifier = repo.url
+
+    try {
+      const ws = await fetchInitialWorkspace(identifier)
+      setWorkspaceForRepo(ws.repo.name, ws)
+      setCurrentRepoKey(ws.repo.name)
+    } catch (err) {
+      // Prefetch failures are logged but navigation still proceeds
+      console.error("Failed to prefetch workspace for history repo", err)
+    }
+
+    navigate(`/diagram?repo=${encodeURIComponent(identifier)}`)
+  }
 
   return (
     <section className="space-y-4">
@@ -56,12 +78,13 @@ export function HistorySection({ history, onRepoClick }: HistorySectionProps) {
           </Button>
         )}
       </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {primaryRepos.map((repo) => (
           <Card
             key={repo.id}
             className="h-32 w-full hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => onRepoClick?.(repo)}
+            onClick={() => handleCardClick(repo)}
           >
             <CardHeader className="space-y-1">
               <CardTitle className="text-sm font-semibold truncate">
@@ -74,13 +97,14 @@ export function HistorySection({ history, onRepoClick }: HistorySectionProps) {
           </Card>
         ))}
       </div>
+
       {expanded && hasMore && (
         <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {extraRepos.map((repo) => (
             <Card
               key={repo.id}
               className="h-32 w-full hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => onRepoClick?.(repo)}
+              onClick={() => handleCardClick(repo)}
             >
               <CardHeader className="space-y-1">
                 <CardTitle className="text-sm font-semibold truncate">
