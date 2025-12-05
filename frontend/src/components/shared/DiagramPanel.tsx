@@ -8,6 +8,7 @@ import {
   Download,
   X,
   Loader2,
+  AlertCircle,
 } from "lucide-react"
 import {
   Dialog,
@@ -30,9 +31,10 @@ import {
 } from "@/components/ui/resizable"
 
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { MermaidDiagram } from "@/components/shared/MermaidDiagram"
+import { definitionHasEdges } from "@/lib/utils"
 
 // Types needed for this component
 export type BranchInfo = {
@@ -131,7 +133,22 @@ export function DiagramPanel({
     setDialogDiagramHeight(600)
   }, [diagramView])
 
-  const hasDiagram = Boolean(diagramDefinition?.trim())
+  const hasDiagram = definitionHasEdges(diagramDefinition)
+  const emptyDiagramMessage = "No diagram available—the returned graph has no edges."
+  const DEFAULT_INLINE_HEIGHT = 360
+  const DEFAULT_DIALOG_HEIGHT = 600
+
+  const handleDiagramError = useCallback(() => {
+    setInlineDiagramHeight(DEFAULT_INLINE_HEIGHT)
+    setDialogDiagramHeight(DEFAULT_DIALOG_HEIGHT)
+  }, [])
+
+  useEffect(() => {
+    if (!hasDiagram || activeDiagramError) {
+      setInlineDiagramHeight(DEFAULT_INLINE_HEIGHT)
+      setDialogDiagramHeight(DEFAULT_DIALOG_HEIGHT)
+    }
+  }, [hasDiagram, activeDiagramError])
 
   const handleExportDiagram = async () => {
     if (!diagramRef.current) return
@@ -298,21 +315,31 @@ export function DiagramPanel({
                 aria-label={`Open enlarged ${diagramLabel.toLowerCase()} for ${branch.label}`}
                 disabled={activeDiagramLoading || !hasDiagram}
               >
-                <div ref={diagramRef} className="w-full">
-                  {hasDiagram ? (
+                <div
+                  ref={diagramRef}
+                  className="w-full flex items-center justify-center"
+                  style={{ minHeight: inlineDiagramHeight + 20 }}
+                >
+                  {activeDiagramLoading ? (
+                    <Skeleton
+                      className="w-full rounded-xl"
+                      style={{ height: inlineDiagramHeight + 20 }}
+                    />
+                  ) : hasDiagram ? (
                     <MermaidDiagram
                       key={mermaidKey}
                       definition={diagramDefinition}
                       onRender={(size) =>
                         setInlineDiagramHeight(Math.max(360, Math.ceil(size.height)))
                       }
+                      onError={handleDiagramError}
                       style={{ height: inlineDiagramHeight + 20, width: "100%" }}
                     />
                   ) : (
-                    <Skeleton
-                      className="w-full rounded-xl"
-                      style={{ height: inlineDiagramHeight + 20 }}
-                    />
+                    <div className="flex h-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 p-6 text-sm text-amber-900 text-center">
+                      <AlertCircle className="h-4 w-4 text-amber-600" aria-hidden />
+                      <span>{emptyDiagramMessage}</span>
+                    </div>
                   )}
                 </div>
               </button>
@@ -338,7 +365,12 @@ export function DiagramPanel({
                 </Button>
               </DialogHeader>
               <div className="h-full w-full overflow-auto rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)] p-4">
-                {hasDiagram ? (
+                {activeDiagramLoading ? (
+                  <Skeleton
+                    className="w-full rounded-xl"
+                    style={{ height: Math.max(dialogDiagramHeight + 20, 600) }}
+                  />
+                ) : hasDiagram ? (
                   <MermaidDiagram
                     key={`${mermaidKey}-dialog`}
                     definition={diagramDefinition}
@@ -346,13 +378,17 @@ export function DiagramPanel({
                       const measured = Math.ceil(size.height)
                       setDialogDiagramHeight(Math.max(600, measured))
                     }}
+                    onError={handleDiagramError}
                     style={{ height: dialogDiagramHeight + 20, width: "100%" }}
                   />
                 ) : (
-                  <Skeleton
-                    className="w-full rounded-xl"
-                    style={{ height: Math.max(dialogDiagramHeight + 20, 600) }}
-                  />
+                  <div
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-10 text-sm text-amber-900 shadow-sm text-center"
+                    style={{ minHeight: Math.max(dialogDiagramHeight + 20, 600) }}
+                  >
+                    <AlertCircle className="h-4 w-4 text-amber-600" aria-hidden />
+                    <span className="font-medium">{emptyDiagramMessage}</span>
+                  </div>
                 )}
               </div>
             </DialogContent>

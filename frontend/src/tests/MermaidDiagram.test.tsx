@@ -31,7 +31,9 @@ describe("MermaidDiagram", () => {
 
   it("initializes mermaid on mount", () => {
     render(<MermaidDiagram definition={mockDefinition} />)
-    expect(mermaid.initialize).toHaveBeenCalled()
+    expect(mermaid.initialize).toHaveBeenCalledWith(
+      expect.objectContaining({ maxEdges: 1000, maxTextSize: 200000 }),
+    )
   })
 
   it("renders the diagram SVG successfully", async () => {

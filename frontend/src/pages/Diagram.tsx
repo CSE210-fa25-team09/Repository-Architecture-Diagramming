@@ -64,7 +64,9 @@ export function Diagram() {
 
   const [branchDetails, setBranchDetails] = useState<BranchLibrary>({} as BranchLibrary)
   const [panels, setPanels] = useState<DiagramPanelState[]>(() =>
-    workspace?.defaultBranch ? [{ id: "diagram-1", branchId: workspace.defaultBranch }] : [],
+    workspace?.defaultBranch
+      ? [{ id: "diagram-1", branchId: workspace.defaultBranch }]
+      : [],
   )
 
   const repoKey = workspace?.repo?.name ?? null

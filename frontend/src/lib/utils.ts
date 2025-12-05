@@ -54,3 +54,12 @@ export function formatLastGenerated(timestamp: number | undefined): string {
 
   return `Generated at ${new Date(tsMs).toLocaleString()}`
 }
+
+// Rudimentary check to see if a Mermaid definition contains at least one edge
+export function definitionHasEdges(definition?: string) {
+  if (!definition) return false
+  const cleaned = definition.replace(/%%.*$/gm, "").trim()
+  if (!cleaned) return false
+  const edgePattern = /\b\S+\s*(?:-->|-\.->|==>|---|->)\s*\S+/ // common mermaid edge syntaxes
+  return edgePattern.test(cleaned)
+}
