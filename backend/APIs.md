@@ -178,11 +178,17 @@ Returns dependency diagrams, repository information, and latest commit details.
 
 ### POST or GET `/api/architecture`
 
-Generate a high-level architecture diagram for a GitHub repository by sending repository metadata to the configured LLM provider. You may supply parameters in the JSON body (POST) or as query parameters (GET). The LLM response is validated to ensure it returns compilable Mermaid syntax.
+Generate a detailed architecture diagram for a GitHub repository using a two-step LLM process:
+1. **Code Analysis**: Fetches and analyzes actual source code files to understand the architecture
+2. **Diagram Generation**: Creates a comprehensive, visually-styled Mermaid diagram based on the analysis
+
+You may supply parameters in the JSON body (POST) or as query parameters (GET). Results are cached based on repository, branch, and commit SHA.
 
 **Parameters (JSON body for POST or query string for GET):**
-- `repoUrl` (required) - GitHub repository URL (e.g., `https://github.com/CSE210-fa25-team09/Repository-Architecture-Diagramming`)
+- `repoUrl` (required) - GitHub repository URL (e.g., `https://github.com/owner/repo`)
 - `branch` (optional) - Branch to analyze (defaults to the repository default branch)
+- `maxFiles` (optional) - Maximum number of source files to analyze (default: 100)
+- `language` (optional) - Language filter: `'all'`, `'jsts'`, `'python'`, `'java'`, `'go'`, `'cpp'` (default: `'all'`)
 
 **Example:**
 ```
@@ -191,30 +197,45 @@ Content-Type: application/json
 
 {
   "repoUrl": "https://github.com/CSE210-fa25-team09/Repository-Architecture-Diagramming",
-  "branch": "main"
+  "branch": "main",
+  "maxFiles": 100,
+  "language": "all"
 }
 ```
 
 **Response:**
 
-Returns the Mermaid diagram produced by the LLM along with the metadata that was supplied as context.
+Returns the Mermaid diagram, code analysis, and metadata.
 
 **Schema:**
 - `success` (boolean) - Request status
-- `diagram` (string) - Mermaid diagram (flowchart syntax) returned by the LLM
-- `metadata` (object) - Repository metadata sent to the LLM
+- `diagram` (string) - Mermaid diagram with visual styling (colors, shapes, subgraphs)
+- `analysis` (string) - Detailed code analysis explaining the architecture
+- `metadata` (object) - Repository and LLM metadata
   - `owner` (string) - Repository owner
   - `repo` (string) - Repository name
-  - `repoUrl` (string) - Normalized GitHub URL used for analysis
+  - `repoUrl` (string) - Normalized GitHub URL
   - `branch` (string) - Branch analyzed
-  - `branchSummary` (object) - Contains total branches and a sample list
-  - `latestCommit` (object) - Latest commit details for the analyzed branch
-  - `fileStats` (object) - File/directory counts and language distribution
-  - `treePreview` (array) - First 60 entries from the repository tree for context
-  - `llm` (object) - Provider/model metadata for the LLM call
+  - `defaultBranch` (string) - Repository's default branch
+  - `latestCommit` (object) - Latest commit details
+  - `branches` (object) - Branch information
+  - `fileTree` (string) - Summary of repository file structure
+  - `readme` (string) - README excerpt (truncated)
+  - `llm` (object) - LLM execution details
+    - `provider` (string) - LLM provider used
+    - `cached` (boolean) - Whether result was from cache
+    - `filesAnalyzed` (number) - Number of source files analyzed
+    - `steps` (number) - Always 2 (analysis + diagram generation)
+
+**Diagram Features:**
+- Visual node shapes based on component type (services, databases, external APIs)
+- Color-coded nodes (blue for core, orange for services, green for data, pink for external)
+- Subgraphs for logical grouping (Frontend, Backend, External, etc.)
+- Meaningful edge labels showing data flow and interactions
+- Left-to-right (LR) layout for readability
 
 **Status Codes:**
-- `200` - Success (diagram and metadata returned)
+- `200` - Success (diagram, analysis, and metadata returned)
 - `400` - Missing or invalid parameters (e.g., invalid GitHub URL)
 - `500` - Server error, GitHub API failure, or LLM error
 
@@ -222,5 +243,12 @@ Returns the Mermaid diagram produced by the LLM along with the metadata that was
 - `success` (boolean) - Always `false`
 - `error` (string) - Error message describing what went wrong
 
-**LLM Prompt Customization:**
-- Set the `LLM_SYSTEM_PROMPT` environment variable to override the default system prompt that instructs the LLM how to format diagrams. If unset, a safe default emphasizing Mermaid flowcharts is used.
+**Caching:**
+- Results are cached based on owner, repo, branch, and commit SHA
+- Subsequent requests for the same commit return cached results instantly
+- Cache is invalidated when new commits are pushed
+
+**Performance Notes:**
+- First request may take 30-60 seconds depending on repository size
+- The endpoint fetches up to `maxFiles` source files for analysis
+- Large repositories benefit from using language filters to focus analysis

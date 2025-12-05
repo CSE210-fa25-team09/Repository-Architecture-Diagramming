@@ -4,30 +4,16 @@
 
 import githubService from './githubService.js';
 import { RepoMetadataError, LlmProviderError } from '../const/errors.js';
+import { 
+  DEFAULT_SYSTEM_PROMPT, 
+  CODE_ANALYSIS_SYSTEM_PROMPT, 
+  DETAILED_DIAGRAM_SYSTEM_PROMPT 
+} from '../const/prompts.js';
 
 const Provider = {
   HUGGING_FACE: 'huggingface',
   OPENAI: 'openai'
 };
-
-const DEFAULT_SYSTEM_PROMPT = `
-You are an expert software architect who turns GitHub repository metadata into concise Mermaid diagrams.
-The user will send:
-- Repository name and branch
-- A trimmed file tree
-- README excerpts
-
-Tasks:
-1. Identify the main architectural components (apps, services, libraries, tools).
-2. Determine how those components collaborate.
-3. Output a single Mermaid graph (flowchart or graph TD/LR) that captures the system decomposition.
-
-Rules:
-- Output ONLY a Mermaid code block (no narrative, no explanations).
-- Prefer graph LR with meaningful node labels.
-- Include external services (GitHub, databases, third-party APIs) when they are referenced.
-- Validate syntax so the block compiles in Mermaid Live Editor.
-`.trim();
 
 function parseEnvInt(value, fallback) {
   const parsed = Number.parseInt(value, 10);
@@ -89,19 +75,34 @@ async function callHuggingFace({ systemPrompt, userPrompt }) {
     throw new LlmProviderError('LLM_API_KEY (or HF_TOKEN) is required for HuggingFace requests.', 500);
   }
 
-  const formattedPrompt = `<system>\n${systemPrompt}\n</system>\n<user>\n${userPrompt}\n</user>`;
-
-  const body = {
-    inputs: formattedPrompt,
-    input: formattedPrompt,
-    parameters: {
-      max_new_tokens: parseEnvInt(process.env.LLM_MAX_NEW_TOKENS, 1024),
-      temperature: 0
+  // Detect if using OpenAI-compatible chat completions endpoint
+  const isOpenAICompatible = apiUrl.includes('/v1/chat/completions');
+  
+  let body;
+  if (isOpenAICompatible) {
+    // Use OpenAI chat format for /v1/chat/completions endpoints
+    body = {
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0,
+      max_tokens: parseEnvInt(process.env.LLM_MAX_NEW_TOKENS, 1024)
+    };
+  } else {
+    // Use standard HuggingFace inference format
+    const formattedPrompt = `<system>\n${systemPrompt}\n</system>\n<user>\n${userPrompt}\n</user>`;
+    body = {
+      inputs: formattedPrompt,
+      parameters: {
+        max_new_tokens: parseEnvInt(process.env.LLM_MAX_NEW_TOKENS, 1024),
+        temperature: 0
+      }
+    };
+    if (model) {
+      body.model = model;
     }
-  };
-
-  if (model) {
-    body.model = model;
   }
 
   const response = await fetch(apiUrl, {
@@ -115,6 +116,7 @@ async function callHuggingFace({ systemPrompt, userPrompt }) {
 
   const payload = await response.text();
   if (!response.ok) {
+    console.error(`HuggingFace API error (${response.status}):`, payload);
     throw new LlmProviderError(`HuggingFace request failed with ${response.status}`, response.status, payload);
   }
 
@@ -211,8 +213,123 @@ export async function generateArchitectureDiagram(metadata, options = {}) {
   };
 }
 
+/**
+ * Analyze source code to understand architecture (Step 1 of detailed analysis)
+ * @param {Map<string, string>} fileContents - Map of file paths to their contents
+ * @param {object} metadata - Repository metadata
+ * @returns {object} Analysis result with structured insights
+ */
+export async function analyzeCodeArchitecture(fileContents, metadata) {
+  if (!fileContents || fileContents.size === 0) {
+    throw new RepoMetadataError('Source code files are required for detailed analysis.');
+  }
+
+  // Build a prompt with the actual source code
+  const codeSnippets = [];
+  const maxCharsPerFile = 3000; // Limit per file to avoid token limits
+  const maxTotalChars = 100000; // Total limit for all code
+  let totalChars = 0;
+
+  for (const [filePath, content] of fileContents) {
+    if (totalChars >= maxTotalChars) break;
+    
+    const truncatedContent = content.slice(0, maxCharsPerFile);
+    const snippet = `### File: ${filePath}\n\`\`\`\n${truncatedContent}${content.length > maxCharsPerFile ? '\n... (truncated)' : ''}\n\`\`\``;
+    codeSnippets.push(snippet);
+    totalChars += snippet.length;
+  }
+
+  const userPrompt = `
+# Repository: ${metadata.owner}/${metadata.repo}
+Branch: ${metadata.branch}
+
+## Source Code Files (${fileContents.size} files)
+
+${codeSnippets.join('\n\n')}
+
+## File Tree Summary
+${metadata.fileTree || 'Not available'}
+
+Please analyze this codebase and provide a structured architectural analysis.
+`.trim();
+
+  const providerResponse = await dispatchToProvider({
+    systemPrompt: CODE_ANALYSIS_SYSTEM_PROMPT,
+    userPrompt
+  });
+
+  return {
+    analysis: providerResponse.text,
+    provider: resolveProvider(),
+    rawResponse: providerResponse.raw,
+    usage: providerResponse.usage,
+    prompt: userPrompt,
+    systemPrompt: CODE_ANALYSIS_SYSTEM_PROMPT,
+    filesAnalyzed: fileContents.size
+  };
+}
+
+/**
+ * Generate detailed Mermaid diagram from code analysis (Step 2 of detailed analysis)
+ * @param {string} codeAnalysis - The analysis from step 1
+ * @param {object} metadata - Repository metadata
+ * @returns {object} Diagram generation result
+ */
+export async function generateDetailedDiagram(codeAnalysis, metadata) {
+  if (!codeAnalysis) {
+    throw new RepoMetadataError('Code analysis is required to generate detailed diagram.');
+  }
+
+  const userPrompt = `
+# IMPORTANT: Generate a diagram based on THIS SPECIFIC analysis - do not use generic examples.
+
+# Code Analysis Summary (USE THIS TO BUILD THE DIAGRAM)
+
+${codeAnalysis}
+
+---
+
+# Repository Context
+Repository: ${metadata.owner}/${metadata.repo}
+Branch: ${metadata.branch}
+
+## File Tree
+${metadata.fileTree || 'Not available'}
+
+## README Excerpt
+${metadata.readme ? metadata.readme.slice(0, 2000) : 'Not available'}
+
+---
+
+# YOUR TASK
+Create a detailed Mermaid architecture diagram that includes ALL components from the Code Analysis Summary above.
+- Include EVERY component mentioned in the analysis (Application, Routing, Dependencies, Parameters, Request/Response, OpenAPI, Middleware, Background Tasks, etc.)
+- Show the relationships and data flows described in the analysis
+- Group into appropriate subgraphs (Core, Routing, Middleware, External, etc.)
+- This should result in a diagram with 15-25+ nodes for a project of this complexity
+`.trim();
+
+  const providerResponse = await dispatchToProvider({
+    systemPrompt: DETAILED_DIAGRAM_SYSTEM_PROMPT,
+    userPrompt
+  });
+
+  const diagram = extractMermaidDiagram(providerResponse.text);
+
+  return {
+    diagram,
+    provider: resolveProvider(),
+    rawResponse: providerResponse.raw,
+    usage: providerResponse.usage,
+    prompt: userPrompt,
+    systemPrompt: DETAILED_DIAGRAM_SYSTEM_PROMPT
+  };
+}
+
 const llmService = {
-  generateArchitectureDiagram
+  generateArchitectureDiagram,
+  analyzeCodeArchitecture,
+  generateDetailedDiagram
 };
 
 export default llmService;

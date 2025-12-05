@@ -436,7 +436,7 @@ async function analyzeDependencies(owner, repo, branch, options = {}) {
       branch,
       { concurrency: FETCH_CONCURRENCY }
     );
-    console.log(`⚡ Fetched ${fileContents.size} files in ${Date.now() - startTime}ms (concurrency: ${FETCH_CONCURRENCY})`);
+    console.log(`Fetched ${fileContents.size} files in ${Date.now() - startTime}ms`);
     
     // Parse all files
     const parsedFiles = [];

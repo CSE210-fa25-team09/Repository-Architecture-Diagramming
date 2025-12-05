@@ -46,11 +46,11 @@ function updateRateLimitFromHeaders(headers) {
     
     if (percentRemaining < 10) {
       const resetTime = new Date(reset * 1000).toLocaleTimeString();
-      console.error(`\n⚠️  CRITICAL: Rate limit below 10%! Only ${remaining} requests remaining.`);
-      console.error(`⚠️  Rate limit resets at: ${resetTime}`);
+      console.error(`CRITICAL: Rate limit below 10%! Only ${remaining} requests remaining.`);
+      console.error(`Rate limit resets at: ${resetTime}`);
       throw new GitHubApiError(`GitHub API rate limit critically low (${percentRemaining.toFixed(1)}%). Please wait until ${resetTime} or use a token with higher limits.`, 429);
     } else if (percentRemaining < 25) {
-      console.warn(`⚠️  Warning: Rate limit below 25%. ${remaining} requests remaining.`);
+      console.warn(`Warning: Rate limit below 25%. ${remaining} requests remaining.`);
     }
   }
 }
@@ -274,7 +274,7 @@ async function getFilesParallel(owner, repo, filePaths, branch = '', options = {
   }
   
   if (errors.length > 0) {
-    console.warn(`⚠️  Failed to fetch ${errors.length} files:`, errors.slice(0, 5).map(e => e.path));
+    console.warn(`Failed to fetch ${errors.length} files:`, errors.slice(0, 5).map(e => e.path));
   }
   
   return results;
