@@ -1,12 +1,155 @@
 /**
- * Mermaid reserved keywords that cannot be used as node IDs
+ * Mermaid Diagram Sanitizer
+ * Fixes common LLM output issues that cause Mermaid parsing errors
  */
+
+// Mermaid reserved keywords that cannot be used as node IDs
 const MERMAID_RESERVED_KEYWORDS = [
   'graph', 'subgraph', 'end', 'style', 'class', 'classDef', 'click',
   'linkStyle', 'direction', 'flowchart', 'sequenceDiagram', 'classDiagram',
   'stateDiagram', 'erDiagram', 'journey', 'gantt', 'pie', 'gitGraph',
   'LR', 'RL', 'TB', 'TD', 'BT'
 ];
+
+// Malformed bracket patterns: [pattern, replacement]
+// LLM sometimes nests shapes incorrectly - these fix the nesting
+const MALFORMED_BRACKET_FIXES = [
+  // Outer [] wrapping inner shapes
+  [/(\w+)\[\(\[([^\]]*)\]\)\]/g, '$1([$2])'],     // [([label])] -> ([label])
+  [/(\w+)\[\(\(([^)]*)\)\)\]/g, '$1(($2))'],      // [((label))] -> ((label))
+  [/(\w+)\[\{\{([^}]*)\}\}\]/g, '$1{{$2}}'],      // [{{label}}] -> {{label}}
+  [/(\w+)\[\[\[([^\]]*)\]\]\]/g, '$1[[$2]]'],     // [[[label]]] -> [[label]]
+  [/(\w+)\[>([^\]]*)\]\]/g, '$1>$2]'],            // [>label]] -> >label]
+  // Outer () wrapping inner [[]]
+  [/(\w+)\(\[\[([^\]]*)\]\]\)/g, '$1([$2])'],     // ([[label]]) -> ([label])
+  [/(\w+)\(\(\[\[([^\]]*)\]\]\)\)/g, '$1(($2))'], // (([[label]])) -> ((label))
+];
+
+/**
+ * Clean problematic characters from node labels
+ * @param {string} label - Raw label text
+ * @param {string} fallback - Fallback if label becomes empty
+ * @returns {string} Cleaned label
+ */
+function cleanLabel(label, fallback = '') {
+  return label
+    .replace(/^\/+/, '')           // Remove leading slashes
+    .replace(/\/+$/, '')           // Remove trailing slashes
+    .replace(/\//g, '-')           // Replace internal slashes with dashes
+    .replace(/\(([^)]*)\)/g, '$1') // Remove parentheses (keep content)
+    .replace(/[<>]/g, '')          // Remove angle brackets
+    .replace(/-+$/, '')            // Remove trailing dashes
+    .replace(/^-+/, '')            // Remove leading dashes
+    .trim() || fallback;
+}
+
+/**
+ * Fix reserved keywords used as standalone node IDs
+ * @param {string} diagram - Diagram text
+ * @returns {string} Fixed diagram
+ */
+function fixReservedKeywords(diagram) {
+  let result = diagram;
+
+  for (const keyword of MERMAID_RESERVED_KEYWORDS) {
+    // Only match standalone keywords (not part of larger words like serviceGraph)
+    const patterns = [
+      // keyword followed by shape bracket
+      [new RegExp(`(?<![a-zA-Z0-9_])(${keyword})(\\s*[\\[\\(\\{\\>])`, 'gi'), `${keyword}Node$2`],
+      // keyword as edge source
+      [new RegExp(`(?<![a-zA-Z0-9_])(${keyword})(\\s*-->)`, 'gi'), `${keyword}Node$2`],
+      // keyword as edge target
+      [new RegExp(`(-->\\s*\\|?[^|]*\\|?\\s*)(${keyword})(?![a-zA-Z0-9_])`, 'gi'), `$1${keyword}Node`],
+      // keyword in style declaration
+      [new RegExp(`(style\\s+)(${keyword})(?![a-zA-Z0-9_])`, 'gi'), `$1${keyword}Node`],
+    ];
+
+    for (const [pattern, replacement] of patterns) {
+      result = result.replace(pattern, replacement);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Clean labels inside all node shape types
+ * @param {string} diagram - Diagram text
+ * @returns {string} Fixed diagram
+ */
+function cleanNodeLabels(diagram) {
+  let result = diagram;
+
+  // Shape patterns: [regex, formatter(nodeId, cleanedLabel) => string]
+  const shapePatterns = [
+    [/(\w+)\[([^\]]*)\]/g, (id, label) => `${id}[${label}]`],       // [label]
+    [/(\w+)\(\[([^\]]*)\]\)/g, (id, label) => `${id}([${label}])`], // ([label])
+    [/(\w+)\(\(([^)]*)\)\)/g, (id, label) => `${id}((${label}))`],  // ((label))
+    [/(\w+)\{\{([^}]*)\}\}/g, (id, label) => `${id}{{${label}}}`],  // {{label}}
+    [/(\w+)\[\[([^\]]*)\]\]/g, (id, label) => `${id}[[${label}]]`], // [[label]]
+  ];
+
+  for (const [pattern, formatter] of shapePatterns) {
+    result = result.replace(pattern, (match, nodeId, label) =>
+      formatter(nodeId, cleanLabel(label, nodeId))
+    );
+  }
+
+  return result;
+}
+
+/**
+ * Remove duplicate node definitions (keep first occurrence)
+ * @param {string[]} lines - Diagram lines
+ * @returns {string[]} Deduplicated lines
+ */
+function removeDuplicateNodes(lines) {
+  const seenNodes = new Set();
+  return lines.filter(line => {
+    const trimmed = line.trim();
+    const nodeDefMatch = trimmed.match(/^(\w+)[[({<>]/);
+    if (nodeDefMatch) {
+      const nodeId = nodeDefMatch[1];
+      if (seenNodes.has(nodeId)) {
+        return false;
+      }
+      seenNodes.add(nodeId);
+    }
+    return true;
+  });
+}
+
+/**
+ * Remove truncated/incomplete lines from the end (LLM output cutoff)
+ * @param {string[]} lines - Diagram lines
+ * @returns {string[]} Lines with truncated ending removed
+ */
+function removeTruncatedEnding(lines) {
+  const result = [...lines];
+
+  while (result.length > 0) {
+    const lastLine = result[result.length - 1].trim();
+
+    const isIncomplete =
+      lastLine === '' ||
+      lastLine.endsWith(',') ||
+      // Incomplete style: just "style" or "style nodeId" without fill/stroke-width
+      lastLine === 'style' ||
+      (/^style\s+/.test(lastLine) && !lastLine.includes('stroke-width')) ||
+      // Unclosed brackets/braces
+      (lastLine.includes('[') && !lastLine.includes(']')) ||
+      (lastLine.includes('{') && !lastLine.includes('}')) ||
+      (lastLine.includes('(') && !lastLine.includes(')'));
+
+    if (isIncomplete) {
+      result.pop();
+    } else {
+      break;
+    }
+  }
+
+  return result;
+}
 
 /**
  * Sanitize Mermaid diagram to fix common LLM output issues
@@ -16,164 +159,23 @@ const MERMAID_RESERVED_KEYWORDS = [
 function sanitizeMermaidDiagram(diagram) {
   let sanitized = diagram;
 
-  // Fix 0a: Fix malformed nested shape brackets BEFORE other processing
-  // LLM sometimes wraps shapes incorrectly like nodeId[([label])] or nodeId[{{label}}]
-  // Pattern: nodeId[([label])] -> nodeId([label])
-  sanitized = sanitized.replace(/(\w+)\[\(\[([^\]]*)\]\)\]/g, '$1([$2])');
-  // Pattern: nodeId[((label))] -> nodeId((label))
-  sanitized = sanitized.replace(/(\w+)\[\(\(([^)]*)\)\)\]/g, '$1(($2))');
-  // Pattern: nodeId[{{label}}] -> nodeId{{label}}
-  sanitized = sanitized.replace(/(\w+)\[\{\{([^}]*)\}\}\]/g, '$1{{$2}}');
-  // Pattern: nodeId[[[label]]] -> nodeId[[label]]
-  sanitized = sanitized.replace(/(\w+)\[\[\[([^\]]*)\]\]\]/g, '$1[[$2]]');
-  // Pattern: nodeId[>label]] -> nodeId>label]
-  sanitized = sanitized.replace(/(\w+)\[>([^\]]*)\]\]/g, '$1>$2]');
-
-  // Fix 0b: Replace reserved keywords used as STANDALONE node IDs only
-  // Must be done first before other transformations
-  // Uses negative lookbehind/lookahead to ensure keyword is not part of a larger word
-  for (const keyword of MERMAID_RESERVED_KEYWORDS) {
-    // Only match keyword when it's a standalone identifier (not part of another word)
-    // (?<![a-zA-Z0-9_]) - not preceded by alphanumeric or underscore
-    // (?![a-zA-Z0-9_]) - not followed by alphanumeric or underscore (except for shape brackets)
-    
-    // Match standalone keyword followed by node shape brackets
-    const nodeDefPattern = new RegExp(`(?<![a-zA-Z0-9_])(${keyword})(\\s*[\\[\\(\\{\\>])`, 'gi');
-    // Match standalone keyword as edge source (keyword -->)
-    const edgeSourcePattern = new RegExp(`(?<![a-zA-Z0-9_])(${keyword})(\\s*-->)`, 'gi');
-    // Match standalone keyword as edge target (--> keyword)
-    const edgeTargetPattern = new RegExp(`(-->\\s*\\|?[^|]*\\|?\\s*)(${keyword})(?![a-zA-Z0-9_])`, 'gi');
-    // Match standalone keyword in style declarations (style keyword fill:...)
-    const styleTargetPattern = new RegExp(`(style\\s+)(${keyword})(?![a-zA-Z0-9_])`, 'gi');
-    
-    // Replace with suffixed version to avoid collision
-    sanitized = sanitized.replace(nodeDefPattern, `${keyword}Node$2`);
-    sanitized = sanitized.replace(edgeSourcePattern, `${keyword}Node$2`);
-    sanitized = sanitized.replace(edgeTargetPattern, `$1${keyword}Node`);
-    sanitized = sanitized.replace(styleTargetPattern, `$1${keyword}Node`);
+  // Step 1: Fix malformed nested brackets (must be first)
+  for (const [pattern, replacement] of MALFORMED_BRACKET_FIXES) {
+    sanitized = sanitized.replace(pattern, replacement);
   }
 
-  // Fix 1: Replace problematic characters in node labels inside brackets
-  // Pattern: nodeId[/api/something] -> nodeId[api-something]
-  // The `/` at the start of brackets is interpreted as parallelogram shape
-  sanitized = sanitized.replace(
-    /(\w+)\[([^\]]*)\]/g,
-    (match, nodeId, label) => {
-      // Replace leading/trailing slashes and internal slashes in labels
-      const cleanLabel = label
-        .replace(/^\/+/, '')           // Remove leading slashes
-        .replace(/\/+$/, '')           // Remove trailing slashes  
-        .replace(/\//g, '-')           // Replace internal slashes with dashes
-        .replace(/\(([^)]*)\)/g, '$1') // Remove parentheses (cause syntax errors)
-        .replace(/[<>]/g, '')          // Remove angle brackets
-        .replace(/-+$/, '')            // Remove trailing dashes (left after slash removal)
-        .replace(/^-+/, '')            // Remove leading dashes
-        .trim();
-      // If label is empty after cleaning, use nodeId as label
-      return `${nodeId}[${cleanLabel || nodeId}]`;
-    }
-  );
+  // Step 2: Fix reserved keywords used as node IDs
+  sanitized = fixReservedKeywords(sanitized);
 
-  // Fix 2: Same for rounded brackets ([label])
-  sanitized = sanitized.replace(
-    /(\w+)\(\[([^\]]*)\]\)/g,
-    (match, nodeId, label) => {
-      const cleanLabel = label
-        .replace(/^\/+/, '')
-        .replace(/\/+$/, '')
-        .replace(/\//g, '-')
-        .replace(/\(([^)]*)\)/g, '$1')
-        .replace(/[<>]/g, '')
-        .replace(/-+$/, '')            // Remove trailing dashes
-        .replace(/^-+/, '')            // Remove leading dashes
-        .trim();
-      return `${nodeId}([${cleanLabel || nodeId}])`;
-    }
-  );
+  // Step 3: Clean labels inside all shape types
+  sanitized = cleanNodeLabels(sanitized);
 
-  // Fix 3: Same for stadium shapes (([label]))
-  sanitized = sanitized.replace(
-    /(\w+)\(\(([^)]*)\)\)/g,
-    (match, nodeId, label) => {
-      const cleanLabel = label
-        .replace(/^\/+/, '')
-        .replace(/\/+$/, '')
-        .replace(/\//g, '-')
-        .replace(/\(([^)]*)\)/g, '$1')
-        .replace(/[<>]/g, '')
-        .replace(/-+$/, '')            // Remove trailing dashes
-        .replace(/^-+/, '')            // Remove leading dashes
-        .trim();
-      return `${nodeId}((${cleanLabel || nodeId}))`;
-    }
-  );
+  // Step 4: Process lines for deduplication and truncation
+  let lines = sanitized.split('\n');
+  lines = removeDuplicateNodes(lines);
+  lines = removeTruncatedEnding(lines);
 
-  // Fix 4: Same for hexagon shapes {{label}}
-  // Parentheses inside hexagons cause parsing errors
-  sanitized = sanitized.replace(
-    /(\w+)\{\{([^}]*)\}\}/g,
-    (match, nodeId, label) => {
-      const cleanLabel = label
-        .replace(/^\/+/, '')
-        .replace(/\/+$/, '')
-        .replace(/\//g, '-')
-        .replace(/\(([^)]*)\)/g, '$1') // Remove parentheses - critical for hexagons!
-        .replace(/[<>]/g, '')
-        .replace(/-+$/, '')
-        .replace(/^-+/, '')
-        .trim();
-      return `${nodeId}{{${cleanLabel || nodeId}}}`;
-    }
-  );
-
-  // Fix 5: Remove any duplicate node definitions (LLM sometimes repeats)
-  const lines = sanitized.split('\n');
-  const seenNodes = new Set();
-  const deduplicatedLines = [];
-  
-  for (const line of lines) {
-    const trimmed = line.trim();
-    // Check if it's a node definition (not edge, not subgraph, not style)
-    const nodeDefMatch = trimmed.match(/^(\w+)[[({<>]/);
-    if (nodeDefMatch) {
-      const nodeId = nodeDefMatch[1];
-      if (seenNodes.has(nodeId)) {
-        continue; // Skip duplicate node definition
-      }
-      seenNodes.add(nodeId);
-    }
-    deduplicatedLines.push(line);
-  }
-
-  // Fix 6: Remove incomplete/truncated lines at the end
-  // LLM responses can be cut off mid-line due to token limits
-  // Common patterns: incomplete style declarations, unclosed brackets, trailing commas
-  while (deduplicatedLines.length > 0) {
-    const lastLine = deduplicatedLines[deduplicatedLines.length - 1].trim();
-    
-    // Check for incomplete patterns that indicate truncation
-    const isIncomplete = 
-      // Style declaration without closing (ends with comma or colon)
-      /^style\s+\w+\s+fill:[^,]*,\s*$/.test(lastLine) ||
-      // Ends with just a comma
-      lastLine.endsWith(',') ||
-      // Incomplete style (has fill but no stroke-width:2px ending)
-      (/^style\s+/.test(lastLine) && !lastLine.includes('stroke-width')) ||
-      // Unclosed brackets/braces
-      (lastLine.includes('[') && !lastLine.includes(']')) ||
-      (lastLine.includes('{') && !lastLine.includes('}')) ||
-      (lastLine.includes('(') && !lastLine.includes(')')) ||
-      // Empty or whitespace only
-      lastLine === '';
-    
-    if (isIncomplete) {
-      deduplicatedLines.pop();
-    } else {
-      break;
-    }
-  }
-
-  return deduplicatedLines.join('\n');
+  return lines.join('\n');
 }
 
 export { sanitizeMermaidDiagram };
