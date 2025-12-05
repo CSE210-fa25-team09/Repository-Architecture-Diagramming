@@ -1,14 +1,16 @@
-import dependencyService from '../src/services/dependencyService.js';
+// Mock the githubService module before importing dependencyService
+jest.mock('../src/services/githubService.js');
 
-const mockGithubService = {
-  getRepoTree: jest.fn(),
-  getFile: jest.fn(),
-  getLatestCommit: jest.fn()
-};
+import dependencyService from '../src/services/dependencyService.js';
+import githubService from '../src/services/githubService.js';
 
 describe('Dependency Service Tests', () => {
 
-  test('extractFilesByLanguage should filter files correctly', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('extractFilesByLanguage should filter files correctly (BFS order)', () => {
     const mockTree = [
       { name: 'src', type: 'dir', children: [
         { name: 'index.js', type: 'file' },
@@ -24,8 +26,9 @@ describe('Dependency Service Tests', () => {
     const pyFiles = dependencyService.extractFilesByLanguage(mockTree, 'python');
     expect(pyFiles).toEqual(['main.py']);
 
+    // BFS order: root-level files first, then nested files
     const allFiles = dependencyService.extractFilesByLanguage(mockTree, 'all');
-    expect(allFiles).toEqual(['src/index.js', 'src/utils.ts', 'main.py']);
+    expect(allFiles).toEqual(['main.py', 'src/index.js', 'src/utils.ts']);
   });
 
   test('parseFile should detect JavaScript imports', () => {
@@ -149,16 +152,18 @@ import (
 
   test('analyzeDependencies should orchestrate the full process', async () => {
     const mockTree = [{ name: 'index.js', type: 'file', path: 'index.js' }];
-    mockGithubService.getRepoTree.mockResolvedValue(mockTree);
-    mockGithubService.getFile.mockResolvedValue("import fs from 'fs';");
+    githubService.getRepoTree.mockResolvedValue(mockTree);
+    // Mock the parallel file fetch to return a Map
+    const mockFileContents = new Map([['index.js', "import fs from 'fs';"]]);
+    githubService.getFilesParallel.mockResolvedValue(mockFileContents);
 
     const result = await dependencyService.analyzeDependencies(
-        mockGithubService, 'owner', 'repo', 'main'
+        'owner', 'repo', 'main'
     );
 
     expect(result.success).toBe(true);
     expect(result.data.tree).toBeDefined();
-    expect(mockGithubService.getRepoTree).toHaveBeenCalled();
-    expect(mockGithubService.getFile).toHaveBeenCalled();
+    expect(githubService.getRepoTree).toHaveBeenCalled();
+    expect(githubService.getFilesParallel).toHaveBeenCalled();
   });
 });
