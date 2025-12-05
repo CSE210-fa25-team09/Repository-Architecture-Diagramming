@@ -88,7 +88,25 @@ function sanitizeMermaidDiagram(diagram) {
     }
   );
 
-  // Fix 4: Remove any duplicate node definitions (LLM sometimes repeats)
+  // Fix 4: Same for hexagon shapes {{label}}
+  // Parentheses inside hexagons cause parsing errors
+  sanitized = sanitized.replace(
+    /(\w+)\{\{([^}]*)\}\}/g,
+    (match, nodeId, label) => {
+      const cleanLabel = label
+        .replace(/^\/+/, '')
+        .replace(/\/+$/, '')
+        .replace(/\//g, '-')
+        .replace(/\(([^)]*)\)/g, '$1') // Remove parentheses - critical for hexagons!
+        .replace(/[<>]/g, '')
+        .replace(/-+$/, '')
+        .replace(/^-+/, '')
+        .trim();
+      return `${nodeId}{{${cleanLabel || nodeId}}}`;
+    }
+  );
+
+  // Fix 5: Remove any duplicate node definitions (LLM sometimes repeats)
   const lines = sanitized.split('\n');
   const seenNodes = new Set();
   const deduplicatedLines = [];
