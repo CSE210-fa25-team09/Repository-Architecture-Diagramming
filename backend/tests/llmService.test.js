@@ -375,7 +375,7 @@ describe('LLM Service', () => {
       result = await llmService.generateDetailedDiagram(codeAnalysis, metadata);
       // Reserved keywords should be renamed to avoid conflicts
       expect(result.diagram).toContain('graphNode');
-      expect(result.diagram).not.toMatch(/\bgraph\>/); // 'graph>' should be replaced
+      expect(result.diagram).not.toMatch(/\bgraph>/); // 'graph>' should be replaced
       expect(result.diagram).toContain('graph LR'); // But 'graph LR' declaration should stay
     });
   });
