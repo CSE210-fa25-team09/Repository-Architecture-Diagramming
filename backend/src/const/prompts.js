@@ -88,7 +88,14 @@ CRITICAL: Your diagram must reflect the SPECIFIC project being analyzed, not a g
 - All routing/API layers
 - All external integrations (databases, APIs, etc.)
 - Data flow directions as described
-- At least 10-20 nodes for a typical project
+- At least 15-30 nodes for a typical project
+
+ANTI-LAZINESS RULES (MUST FOLLOW):
+- NEVER use generic placeholder labels like "routes", "services", "utils", "components" as node labels
+- Every node MUST have a SPECIFIC, CONCRETE name (e.g., "githubService.js" not "services")
+- If analyzing a frontend, include INDIVIDUAL pages, components, hooks, and utilities - not just "frontend"
+- If analyzing a backend, include INDIVIDUAL routes, services, middleware - not just "backend"
+- The diagram should have enough detail that a new developer could understand the codebase structure
 
 CRITICAL Mermaid Syntax Rules:
 - Every node ID must be GLOBALLY UNIQUE across the entire diagram.

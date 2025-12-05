@@ -46,8 +46,11 @@ function sanitizeMermaidDiagram(diagram) {
         .replace(/\//g, '-')           // Replace internal slashes with dashes
         .replace(/\(([^)]*)\)/g, '$1') // Remove parentheses (cause syntax errors)
         .replace(/[<>]/g, '')          // Remove angle brackets
+        .replace(/-+$/, '')            // Remove trailing dashes (left after slash removal)
+        .replace(/^-+/, '')            // Remove leading dashes
         .trim();
-      return `${nodeId}[${cleanLabel}]`;
+      // If label is empty after cleaning, use nodeId as label
+      return `${nodeId}[${cleanLabel || nodeId}]`;
     }
   );
 
@@ -61,8 +64,10 @@ function sanitizeMermaidDiagram(diagram) {
         .replace(/\//g, '-')
         .replace(/\(([^)]*)\)/g, '$1')
         .replace(/[<>]/g, '')
+        .replace(/-+$/, '')            // Remove trailing dashes
+        .replace(/^-+/, '')            // Remove leading dashes
         .trim();
-      return `${nodeId}([${cleanLabel}])`;
+      return `${nodeId}([${cleanLabel || nodeId}])`;
     }
   );
 
@@ -76,8 +81,10 @@ function sanitizeMermaidDiagram(diagram) {
         .replace(/\//g, '-')
         .replace(/\(([^)]*)\)/g, '$1')
         .replace(/[<>]/g, '')
+        .replace(/-+$/, '')            // Remove trailing dashes
+        .replace(/^-+/, '')            // Remove leading dashes
         .trim();
-      return `${nodeId}((${cleanLabel}))`;
+      return `${nodeId}((${cleanLabel || nodeId}))`;
     }
   );
 
