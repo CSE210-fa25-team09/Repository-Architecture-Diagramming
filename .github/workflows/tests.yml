@@ -43,8 +43,28 @@ jobs:
         working-directory: ./backend
         run: npm test
 
-        #coverage badge for github actions
-        #source: https://dev.to/thejaredwilcurt/coverage-badge-with-github-actions-finally-59fa
+      - name: Get Backend Coverage for badge
+        working-directory: ./backend
+        run: |
+            COVERAGE=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+            echo "BACKEND_COVERAGE=${COVERAGE}%" >> $GITHUB_ENV
+            
+            REF=${{ github.ref }}
+            IFS='/' read -ra PATHS <<< "$REF"
+            BRANCH_NAME="${PATHS[1]}_${PATHS[2]}"
+            echo "BRANCH=$(echo ${BRANCH_NAME})" >> $GITHUB_ENV
+
+      - name: Create Backend Badge
+        uses: schneegans/dynamic-badges-action@v1.0.0
+        with:
+            auth: ${{ secrets.GIST_SECRET }}
+            gistID: 950ea96d8c81479a2fc3e12d3ca71532
+            filename: Repository-Architecture-Diagramming-backend__${{ env.BRANCH }}.json
+            label: Backend Coverage
+            message: ${{ env.BACKEND_COVERAGE }}
+            color: blue
+            namedLogo: node.js
+
       - name: Get Coverage for badge
         working-directory: ./frontend
         run: |
@@ -76,4 +96,4 @@ jobs:
             label: Frontend Test Coverage
             message: ${{ env.COVERAGE }}
             color: green
-            namedLogo: jest 
+            namedLogo: jest

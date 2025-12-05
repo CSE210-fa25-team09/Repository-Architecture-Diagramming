@@ -135,6 +135,32 @@ export const PATH_RESOLUTION_EXTENSIONS = {
   go: ['.go']
 };
 
+// Patterns to identify test directories
+export const TEST_DIR_PATTERNS = [
+  /^tests?$/i,           // test, tests, Test, Tests
+  /^__tests__$/,         // __tests__ (Jest convention)
+  /^spec$/i,             // spec, Spec
+  /^testing$/i,          // testing
+  /^test_/i,             // test_something
+  /^_tests?$/i,          // _test, _tests
+];
+
+// Patterns to identify test files by filename
+export const TEST_FILE_PATTERNS = [
+  /\.test\.[jt]sx?$/i,      // .test.js, .test.ts, .test.jsx, .test.tsx
+  /\.spec\.[jt]sx?$/i,      // .spec.js, .spec.ts, .spec.jsx, .spec.tsx
+  /_test\.[jt]sx?$/i,       // _test.js, _test.ts
+  /_spec\.[jt]sx?$/i,       // _spec.js, _spec.ts
+  /^test_.*\.py$/i,         // test_*.py (Python)
+  /_test\.py$/i,            // *_test.py (Python)
+  /^test_.*\.go$/i,         // test_*.go (Go)
+  /_test\.go$/i,            // *_test.go (Go)
+  /Test\.java$/,            // *Test.java (Java)
+  /Tests\.java$/,           // *Tests.java (Java)
+  /\.test\.cpp$/i,          // .test.cpp
+  /_test\.cpp$/i,           // _test.cpp
+];
+
 // Helper to detect language from file extension
 export function getLanguageFromExtension(filePath) {
   const ext = filePath.substring(filePath.lastIndexOf('.'));

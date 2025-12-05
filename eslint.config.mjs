@@ -16,5 +16,20 @@ export default defineConfig([
       'jsdoc/require-returns': 'error',
       'jsdoc/valid-types': 'error',
     }
+  },
+
+  {
+    files: ["backend/tests/**/*.js", "backend/**/*.test.js"],
+    languageOptions: {
+      globals: {
+        ...globals.jest 
+      }
+    },
+    rules: {
+      'jsdoc/require-description': 'off',
+      'jsdoc/require-param': 'off',
+      'jsdoc/require-returns': 'off',
+      'jsdoc/valid-types': 'off',
+    }
   }
 ]);

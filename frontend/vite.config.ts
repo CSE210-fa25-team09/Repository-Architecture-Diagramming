@@ -12,6 +12,21 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom"],
+          radix: [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-slot",
+          ],
+          mermaid: ["mermaid"],
+        },
+      },
+    },
+  },
   test: {
     environment: "jsdom",
     css: true,
