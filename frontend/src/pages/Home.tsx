@@ -68,7 +68,7 @@ export function Home() {
     <main className="flex flex-1 flex-col gap-10 pb-12">
       <RepositoryInputCard />
       <section className="w-full flex flex-col gap-4">
-        <div className="w-full max-w-5xl space-y-2">
+        <div className="w-full space-y-2">
           <h2 id="search-heading" className="text-sm font-semibold mb-3">
             Search repos
           </h2>
