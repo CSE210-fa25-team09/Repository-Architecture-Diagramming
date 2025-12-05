@@ -4,10 +4,6 @@ import { UserInputError } from '../const/errors.js';
 
 const architectureRouter = express.Router();
 
-/**
- * Handle architecture diagram requests.
- * Two-step LLM process: analyze code first, then generate diagram.
- */
 async function handleRequest(req, res) {
   const repoUrl = req.body?.repoUrl || req.query?.repoUrl;
   const branch = req.body?.branch || req.query?.branch;

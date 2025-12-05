@@ -128,7 +128,11 @@ async function callHuggingFace({ systemPrompt, userPrompt }) {
   }
 
   let generatedText = '';
-  if (Array.isArray(parsed)) {
+  
+  // Handle OpenAI-compatible response format (choices array)
+  if (isOpenAICompatible && parsed.choices?.[0]?.message?.content) {
+    generatedText = parsed.choices[0].message.content;
+  } else if (Array.isArray(parsed)) {
     generatedText = parsed[0]?.generated_text || '';
   } else if (typeof parsed.generated_text === 'string') {
     generatedText = parsed.generated_text;
