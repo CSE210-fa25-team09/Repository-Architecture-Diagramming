@@ -89,7 +89,7 @@ function sanitizeMermaidDiagram(diagram) {
   for (const line of lines) {
     const trimmed = line.trim();
     // Check if it's a node definition (not edge, not subgraph, not style)
-    const nodeDefMatch = trimmed.match(/^(\w+)[\[\(\{<>]/);
+    const nodeDefMatch = trimmed.match(/^(\w+)[[({<>]/);
     if (nodeDefMatch) {
       const nodeId = nodeDefMatch[1];
       if (seenNodes.has(nodeId)) {
