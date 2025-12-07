@@ -1,57 +1,36 @@
+// src/lib/repoData.ts
+
 export type Repo = {
   id: string
   name: string
   description: string
+  url: string
 }
+
 export const SAMPLE_REPOS: Repo[] = [
   {
-    id: "repo-1",
-    name: "repo-1",
-    description: "Sample repository-1",
+    id: "our-repo",
+    name: "Repository Architecture Diagramming",
+    description:
+      "Our own CSE210 team repo for the repository architecture diagramming tool.",
+    url: "https://github.com/CSE210-fa25-team09/Repository-Architecture-Diagramming",
   },
   {
-    id: "repo-2",
-    name: "repo-2",
-    description: "Sample repository-2",
+    id: "fastapi",
+    name: "FastAPI",
+    description: "High-performance Python web framework for building APIs.",
+    url: "https://github.com/tiangolo/fastapi",
   },
   {
-    id: "repo-3",
-    name: "repo-3",
-    description: "Sample repository-3",
+    id: "call-center-ai",
+    name: "Microsoft Call Center AI",
+    description: "Reference implementation for an AI-powered call center system.",
+    url: "https://github.com/microsoft/call-center-ai",
   },
   {
-    id: "repo-4",
-    name: "repo-4",
-    description: "Sample repository-4",
-  },
-  {
-    id: "repo-5",
-    name: "repo-5",
-    description: "Sample repository-5",
-  },
-  {
-    id: "repo-6",
-    name: "repo-6",
-    description: "Sample repository-6",
-  },
-  {
-    id: "repo-7",
-    name: "repo-7",
-    description: "Sample repository-7",
-  },
-  {
-    id: "repo-8",
-    name: "repo-8",
-    description: "Sample repository-8",
-  },
-  {
-    id: "repo-9",
-    name: "repo-9",
-    description: "Sample repository-9",
-  },
-  {
-    id: "repo-10",
-    name: "repo-10",
-    description: "Sample repository-10",
+    id: "verl",
+    name: "VERL",
+    description: "Volcengine’s open-source framework for vision-language and RL models.",
+    url: "https://github.com/volcengine/verl",
   },
 ]

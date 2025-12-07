@@ -1,264 +1,19 @@
+import dotenv from 'dotenv';
 import { 
-  REGEX_PATTERNS, 
-  BUILTIN_MODULES, 
   FILE_EXTENSIONS,
-  PATH_RESOLUTION_EXTENSIONS,
-  getLanguageFromExtension
-} from '../config/parserConfig.js';
+  TEST_DIR_PATTERNS,
+  TEST_FILE_PATTERNS
+} from '../const/parserConfig.js';
+import { UserInputError } from '../const/errors.js';
+import githubService from './githubService.js';
+import { parseFile, resolveImportPath } from '../utils/parser.js';
 
-// Helper to add unique dependencies
-function addDependency(dependencies, seen, module, type) {
-  if (!seen.has(module)) {
-    dependencies.push({ module, type });
-    seen.add(module);
-  }
-}
+dotenv.config();
 
-function parseJSTSFile(content, filePath) {
-  const dependencies = [];
-  const seen = new Set();
-  
-  // Parse all import patterns
-  const patterns = [
-    REGEX_PATTERNS.jsts.require,
-    REGEX_PATTERNS.jsts.import,
-    REGEX_PATTERNS.jsts.dynamicImport,
-    REGEX_PATTERNS.jsts.exportFrom,
-    REGEX_PATTERNS.jsts.tripleSlash
-  ];
-  
-  patterns.forEach(pattern => {
-    let match;
-    while ((match = pattern.exec(content)) !== null) {
-      addDependency(dependencies, seen, match[1], classifyJstsDependency(match[1]));
-    }
-  });
-  
-  return { filePath, dependencies };
-}
-
-function parseCppFile(content, filePath) {
-  const dependencies = [];
-  let match;
-  
-  // Match #include <header> (system headers)
-  while ((match = REGEX_PATTERNS.cpp.systemInclude.exec(content)) !== null) {
-    dependencies.push({
-      module: match[1],
-      type: 'builtin' // System/standard library headers
-    });
-  }
-  
-  // Match #include "header" (local/project headers)
-  while ((match = REGEX_PATTERNS.cpp.localInclude.exec(content)) !== null) {
-    const header = match[1];
-    dependencies.push({
-      module: header,
-      type: header.startsWith('.') || header.includes('/') ? 'internal' : 'external'
-    });
-  }
-  
-  return { filePath, dependencies };
-}
-
-function parseJavaFile(content, filePath) {
-  const dependencies = [];
-  let match;
-  
-  // Parse import statements (including static imports and wildcard imports)
-  while ((match = REGEX_PATTERNS.java.import.exec(content)) !== null) {
-    const importPath = match[1];
-    
-    // Skip wildcard imports like java.util.*
-    if (importPath.endsWith('.*')) {
-      const packageName = importPath.slice(0, -2); // Remove .*
-      dependencies.push({
-        module: packageName,
-        type: classifyJavaDependency(packageName)
-      });
-    } else {
-      // For specific class imports, use the package name
-      const lastDot = importPath.lastIndexOf('.');
-      const packageName = lastDot > 0 ? importPath.substring(0, lastDot) : importPath;
-      dependencies.push({
-        module: packageName,
-        type: classifyJavaDependency(packageName)
-      });
-    }
-  }
-  
-  return { filePath, dependencies };
-}
-
-function parseGoFile(content, filePath) {
-  const dependencies = [];
-  const importedPackages = new Set();
-  
-  // Parse single-line imports: import "package"
-  let match;
-  while ((match = REGEX_PATTERNS.go.import.exec(content)) !== null) {
-    importedPackages.add(match[1]);
-  }
-  
-  // Parse multi-line import blocks: import ( ... )
-  while ((match = REGEX_PATTERNS.go.importBlock.exec(content)) !== null) {
-    const importBlock = match[1];
-    let lineMatch;
-    while ((lineMatch = REGEX_PATTERNS.go.importLine.exec(importBlock)) !== null) {
-      importedPackages.add(lineMatch[1]);
-    }
-  }
-  
-  // Classify each imported package
-  importedPackages.forEach(packagePath => {
-    dependencies.push({
-      module: packagePath,
-      type: classifyGoDependency(packagePath)
-    });
-  });
-  
-  return { filePath, dependencies };
-}
-
-function parsePythonFile(content, filePath) {
-  const dependencies = [];
-  let match;
-  
-  // Parse import statements
-  while ((match = REGEX_PATTERNS.python.import.exec(content)) !== null) {
-    const moduleName = match[1].split('.')[0]; // Get base module (e.g., 'os' from 'os.path')
-    dependencies.push({
-      module: moduleName,
-      type: classifyPythonDependency(moduleName)
-    });
-  }
-  
-  // Parse from...import statements
-  while ((match = REGEX_PATTERNS.python.fromImport.exec(content)) !== null) {
-    const moduleName = match[1];
-    dependencies.push({
-      module: moduleName,
-      type: classifyPythonDependency(moduleName)
-    });
-  }
-  
-  return { filePath, dependencies };
-}
-
-// Main parser that detects file type and uses appropriate parser
-function parseFile(content, filePath) {
-  const ext = filePath.substring(filePath.lastIndexOf('.'));
-  
-  // Go files
-  if (FILE_EXTENSIONS.go.includes(ext)) {
-    return parseGoFile(content, filePath);
-  }
-  
-  // Java files
-  if (FILE_EXTENSIONS.java.includes(ext)) {
-    return parseJavaFile(content, filePath);
-  }
-  
-  // Python files
-  if (FILE_EXTENSIONS.python.includes(ext)) {
-    return parsePythonFile(content, filePath);
-  }
-  
-  // C/C++ files
-  if (FILE_EXTENSIONS.cpp.includes(ext)) {
-    return parseCppFile(content, filePath);
-  }
-  
-  // JavaScript/TypeScript files (default)
-  return parseJSTSFile(content, filePath);
-}
-
-function classifyJstsDependency(moduleName) {
-  if (moduleName.startsWith('.')) return 'internal';
-  
-  if (BUILTIN_MODULES.jsts.includes(moduleName) || moduleName.startsWith('node:')) {
-    return 'builtin';
-  }
-  
-  return 'external';
-}
-
-function classifyPythonDependency(moduleName) {
-  // Relative imports (start with .)
-  if (moduleName.startsWith('.')) return 'internal';
-  
-  if (BUILTIN_MODULES.python.includes(moduleName)) {
-    return 'builtin';
-  }
-  
-  return 'external';
-}
-
-function classifyJavaDependency(packageName) {
-  // Check if it's a standard Java package
-  if (packageName.startsWith('java.') || packageName.startsWith('javax.')) {
-    return 'builtin';
-  }
-  
-  // Check against known standard packages
-  if (BUILTIN_MODULES.java.includes(packageName)) {
-    return 'builtin';
-  }
-  
-  // Everything else is external (third-party libraries)
-  return 'external';
-}
-
-function classifyGoDependency(packagePath) {
-  // Relative imports (start with .)
-  if (packagePath.startsWith('.')) return 'internal';
-  
-  // Check if it's a standard library package
-  // Standard library packages don't contain dots or are single-level
-  const parts = packagePath.split('/');
-  const basePackage = parts[0];
-  
-  // Check against Go standard library
-  if (BUILTIN_MODULES.go.includes(packagePath) || BUILTIN_MODULES.go.includes(basePackage)) {
-    return 'builtin';
-  }
-  
-  // External packages typically have domain names (contain dots) or start with github.com, etc.
-  if (basePackage.includes('.') || packagePath.includes('github.com') || packagePath.includes('golang.org')) {
-    return 'external';
-  }
-  
-  // If no dot and not in stdlib, could be internal project package
-  return 'internal';
-}
-
-function resolveImportPath(sourcePath, importPath, fileSet) {
-  if (!importPath.startsWith('./') && !importPath.startsWith('../')) return null;
-  
-  // Resolve the base path
-  const sourceDir = sourcePath.substring(0, sourcePath.lastIndexOf('/'));
-  const parts = sourceDir.split('/');
-  const importParts = importPath.split('/');
-  
-  for (const part of importParts) {
-    if (part === '..') parts.pop();
-    else if (part !== '.') parts.push(part);
-  }
-  
-  const basePath = parts.join('/');
-  
-  // Get language-specific extensions to try
-  const language = getLanguageFromExtension(sourcePath);
-  const extensionsToTry = PATH_RESOLUTION_EXTENSIONS[language] || PATH_RESOLUTION_EXTENSIONS.javascript;
-  
-  // Try each possible extension/path variant
-  for (const ext of extensionsToTry) {
-    const possiblePath = basePath + ext;
-    if (fileSet.has(possiblePath)) return possiblePath;
-  }
-  
-  return null;
-}
+// Default concurrency for parallel file fetching
+const FETCH_CONCURRENCY = process.env.FETCH_CONCURRENCY 
+  ? parseInt(process.env.FETCH_CONCURRENCY) 
+  : 20;
 
 function exportDependencyGraphWithTree(parsedFiles, repoTree) {
   const fileSet = new Set(parsedFiles.map(f => f.filePath));
@@ -311,13 +66,30 @@ function exportDependencyGraphWithTree(parsedFiles, repoTree) {
 }
 
 /**
- * Extract files from a tree structure by language
+ * Extract files from a tree structure by language using BFS
+ * BFS ensures files at shallower depths are collected first,
+ * providing better coverage of top-level architecture when maxFiles is limited
  * @param {Array|Object} tree - The tree structure (array of nodes or single root node)
  * @param {string} language - Language name ('jsts', 'cpp', 'python', 'java', 'go', or 'all')
+ * @param {Object} options - Extraction options
+ * @param {boolean} options.includeTests - Whether to include test files (default: false)
  * @returns {Array} Array of file paths matching the language
  */
-function extractFilesByLanguage(tree, language = 'all') {
+function extractFilesByLanguage(tree, language = 'all', options = {}) {
+  const { includeTests = false } = options;
   const codeFiles = [];
+  
+  function isTestFile(filePath, fileName) {
+    // Check if file is in a test directory
+    const pathParts = filePath.split('/');
+    for (const part of pathParts.slice(0, -1)) { // Exclude filename
+      if (TEST_DIR_PATTERNS.some(pattern => pattern.test(part))) {
+        return true;
+      }
+    }
+    // Check if filename matches test patterns
+    return TEST_FILE_PATTERNS.some(pattern => pattern.test(fileName));
+  }
   
   // Determine which extensions to look for
   let targetExtensions;
@@ -332,27 +104,40 @@ function extractFilesByLanguage(tree, language = 'all') {
   } else if (FILE_EXTENSIONS[language]) {
     targetExtensions = FILE_EXTENSIONS[language];
   } else {
-    throw new Error(`Unknown language: ${language}. Use 'jsts', 'cpp', 'python', 'java', 'go', or 'all'`);
+    throw new UserInputError(`Unknown language: ${language}. Use 'jsts', 'cpp', 'python', 'java', 'go', or 'all'`);
   }
   
-  function traverse(nodes, currentPath = '') {
-    if (!Array.isArray(nodes)) return;
-    nodes.forEach(node => {
-      const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
-      const ext = node.name.substring(node.name.lastIndexOf('.'));
-      if (node.type === 'file' && targetExtensions.includes(ext)) {
-        codeFiles.push(fullPath);
-      } else if (node.type === 'dir' && node.children) {
-        traverse(node.children, fullPath);
-      }
-    });
-  }
+  // BFS traversal to prioritize files at shallower depths
+  const queue = [];
   
-  // Handle both array of nodes and single root node with children
+  // Initialize queue with root nodes
   if (Array.isArray(tree)) {
-    traverse(tree);
+    tree.forEach(node => queue.push({ node, currentPath: '' }));
   } else if (tree && tree.children) {
-    traverse(tree.children, tree.path || '');
+    tree.children.forEach(node => queue.push({ node, currentPath: tree.path || '' }));
+  }
+  
+  while (queue.length > 0) {
+    const { node, currentPath } = queue.shift();
+    const fullPath = currentPath ? `${currentPath}/${node.name}` : node.name;
+    
+    if (node.type === 'file') {
+      const ext = node.name.substring(node.name.lastIndexOf('.'));
+      if (targetExtensions.includes(ext)) {
+        // Skip test files unless explicitly included
+        if (!includeTests && isTestFile(fullPath, node.name)) {
+          continue;
+        }
+        codeFiles.push(fullPath);
+      }
+    } else if (node.type === 'dir' && node.children) {
+      // Skip test directories entirely unless tests are included
+      if (!includeTests && TEST_DIR_PATTERNS.some(pattern => pattern.test(node.name))) {
+        continue;
+      }
+      // Add children to queue for BFS
+      node.children.forEach(child => queue.push({ node: child, currentPath: fullPath }));
+    }
   }
   
   return codeFiles;
@@ -360,30 +145,42 @@ function extractFilesByLanguage(tree, language = 'all') {
 
 /**
  * Analyze dependencies for a repository
- * @param {Object} githubService - GitHub service instance
  * @param {string} owner - Repository owner
  * @param {string} repo - Repository name
  * @param {string} branch - Branch name
  * @param {Object} options - Analysis options
+ * @param {number} options.maxFiles - Maximum number of files to analyze
+ * @param {string} options.language - Language filter ('jsts', 'cpp', 'python', 'java', 'go', or 'all')
+ * @param {boolean} options.includeTests - Whether to include test files (default: false)
  * @returns {Object} Analysis result with tree, parsedFiles, and metadata
  */
-async function analyzeDependencies(githubService, owner, repo, branch, options = {}) {
-  const { maxFiles = 1000, language = 'all' } = options;
+async function analyzeDependencies(owner, repo, branch, options = {}) {
+  const { maxFiles = 1000, language = 'all', includeTests = false } = options;
   
   try {
     // Get repository tree
     const tree = await githubService.getRepoTree(owner, repo, '', branch);
     
-    // Extract files by language
-    const allCodeFiles = extractFilesByLanguage(tree, language);
+    // Extract files by language (excludes test files by default)
+    const allCodeFiles = extractFilesByLanguage(tree, language, { includeTests });
     const filesToAnalyze = maxFiles ? allCodeFiles.slice(0, maxFiles) : allCodeFiles;
     
-    console.log(`Found ${allCodeFiles.length} files, analyzing ${filesToAnalyze.length}`);
+    console.log(`Found ${allCodeFiles.length} files${includeTests ? '' : ' (excluding tests)'}, analyzing ${filesToAnalyze.length}`);
+    
+    // Fetch all files in parallel for much faster analysis
+    const startTime = Date.now();
+    const fileContents = await githubService.getFilesParallel(
+      owner, 
+      repo, 
+      filesToAnalyze, 
+      branch,
+      { concurrency: FETCH_CONCURRENCY }
+    );
+    console.log(`Fetched ${fileContents.size} files in ${Date.now() - startTime}ms`);
     
     // Parse all files
     const parsedFiles = [];
-    for (const filePath of filesToAnalyze) {
-      const content = await githubService.getFile(owner, repo, filePath, branch);
+    for (const [filePath, content] of fileContents) {
       const parsed = parseFile(content, filePath);
       parsedFiles.push(parsed);
     }
@@ -406,12 +203,6 @@ async function analyzeDependencies(githubService, owner, repo, branch, options =
 }
 
 export default {
-  parseJSTSFile,
-  parseCppFile,
-  parsePythonFile,
-  parseJavaFile,
-  parseGoFile,
-  parseFile,
   exportDependencyGraphWithTree,
   extractFilesByLanguage,
   analyzeDependencies

@@ -41,20 +41,34 @@ export function Home() {
   }, [history])
 
   const isSearching = searchInput.trim().length > 0
+
+  const searchableRepos = useMemo(() => {
+    const merged = new Map<string, Repo>()
+    history.forEach((repo) => merged.set(repo.id, repo))
+    SAMPLE_REPOS.forEach((repo) => {
+      if (!merged.has(repo.id)) {
+        merged.set(repo.id, repo)
+      }
+    })
+    return Array.from(merged.values())
+  }, [history])
+
   const filteredRepos: Repo[] = useMemo(() => {
     const q = searchInput.trim().toLowerCase()
     if (!q) return []
-    return SAMPLE_REPOS.filter(
+    return searchableRepos.filter(
       (repo) =>
-        repo.name.toLowerCase().includes(q) || repo.description.toLowerCase().includes(q),
+        repo.name.toLowerCase().includes(q) ||
+        repo.description.toLowerCase().includes(q) ||
+        repo.url.toLowerCase().includes(q),
     )
-  }, [searchInput])
+  }, [searchInput, searchableRepos])
 
   return (
     <main className="flex flex-1 flex-col gap-10 pb-12">
       <RepositoryInputCard />
       <section className="w-full flex flex-col gap-4">
-        <div className="w-full max-w-5xl space-y-2">
+        <div className="w-full space-y-2">
           <h2 id="search-heading" className="text-sm font-semibold mb-3">
             Search repos
           </h2>

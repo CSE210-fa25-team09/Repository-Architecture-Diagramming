@@ -7,18 +7,21 @@ import githubService from '../services/githubService.js';
 
 dotenv.config();
 
-const maxFiles = process.env.MAX_ANALYZE_FILES ? parseInt(process.env.MAX_ANALYZE_FILES) : 1000;
+const maxFiles = process.env.MAX_ANALYZE_FILES ? parseInt(process.env.MAX_ANALYZE_FILES) : 100;
 const graphRouter = express.Router();
 
 // Endpoint to analyze repository and return diagrams with metadata
 graphRouter.get('/api/analyzeRepo', async (req, res) => {
-  const { owner, repo, branch } = req.query;
+  const { owner, repo, branch, includeTests } = req.query;
 
   if (!owner || !repo) {
     return res.status(400).json({ 
       error: 'Missing required parameters: owner and repo' 
     });
   }
+
+  // Parse includeTests as boolean (default: false to exclude test files)
+  const shouldIncludeTests = includeTests === 'true';
 
   try {
     const queryBranch = branch || await githubService.getDefaultBranch(owner, repo);
@@ -31,7 +34,8 @@ graphRouter.get('/api/analyzeRepo', async (req, res) => {
     const commitSha = commitData.sha;
     
     // Check for cached diagrams using unified cache service
-    const cacheKey = cacheService.buildDependencyKey(owner, repo, queryBranch, commitSha);
+    // Include includeTests in cache key to differentiate results
+    const cacheKey = cacheService.buildDependencyKey(owner, repo, queryBranch, commitSha) + (shouldIncludeTests ? ':tests' : '');
     const cached = cacheService.get(cacheKey);
     
     if (cached) {
@@ -43,13 +47,12 @@ graphRouter.get('/api/analyzeRepo', async (req, res) => {
       });
     }
 
-    // Analyze dependencies (analyze all files)
+    // Analyze dependencies (excludes test files by default)
     const result = await dependencyService.analyzeDependencies(
-      githubService, 
       owner, 
       repo, 
       queryBranch, 
-      { maxFiles }
+      { maxFiles, includeTests: shouldIncludeTests }
     );
 
     if (!result.success) {
@@ -77,7 +80,7 @@ graphRouter.get('/api/analyzeRepo', async (req, res) => {
     
     cacheService.set(cacheKey, cacheData);
 
-    console.log(`✅ Generated diagrams for ${owner}/${repo} (${queryBranch}@${commitSha})`);
+    console.log(`Generated diagrams for ${owner}/${repo} (${queryBranch}@${commitSha})`);
 
     res.json({
       allDependencies,
@@ -89,7 +92,7 @@ graphRouter.get('/api/analyzeRepo', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('❌ Error:', err.message);
+    console.error('Error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
