@@ -11,6 +11,7 @@ export type WorkspaceResponse = {
     description: string
   }
   branches: WorkspaceBranch[]
+  defaultBranch: string
 }
 
 export type BranchDiagramResponse = {
@@ -128,6 +129,7 @@ export async function fetchInitialWorkspace(
     success: boolean
     branches: string[]
     repoDescription: string
+    defaultBranch: string
   } = await resp.json()
 
   if (!data.success) {
@@ -143,6 +145,7 @@ export async function fetchInitialWorkspace(
       id: name,
       name,
     })),
+    defaultBranch: data.defaultBranch,
   }
 
   cachedWorkspace = workspace

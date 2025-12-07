@@ -9,6 +9,7 @@ type MermaidDiagramProps = {
   style?: CSSProperties
   onRender?: (size: { width: number; height: number }) => void
   minWidth?: number
+  onError?: (message: string) => void
 }
 
 let mermaidHasInitialized = false
@@ -17,6 +18,8 @@ function ensureMermaidIsReady() {
   if (mermaidHasInitialized) return
   mermaid.initialize({
     startOnLoad: false,
+    maxEdges: 1000,
+    maxTextSize: 200000,
     securityLevel: "strict",
     theme: "base",
     fontFamily: "Inter, 'Segoe UI', system-ui, sans-serif",
@@ -77,6 +80,7 @@ export function MermaidDiagram({
   style,
   onRender,
   minWidth,
+  onError,
 }: MermaidDiagramProps) {
   const [error, setError] = useState<string | null>(null)
   // Use a ref to access the DOM element directly
@@ -123,7 +127,11 @@ export function MermaidDiagram({
         }
       } catch (err) {
         console.error("Failed to render Mermaid diagram", err)
-        if (isMounted) setError("Unable to render diagram.")
+        const message = "Unable to render diagram."
+        if (isMounted) {
+          setError(message)
+          onError?.(message)
+        }
       }
     }
 
@@ -131,7 +139,7 @@ export function MermaidDiagram({
     return () => {
       isMounted = false
     }
-  }, [definition, renderId, minWidth, onRender])
+  }, [definition, renderId, minWidth, onRender, onError])
 
   if (error) {
     return (

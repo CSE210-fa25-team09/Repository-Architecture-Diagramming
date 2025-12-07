@@ -20,6 +20,7 @@ const mockFetchInitialWorkspace = vi.fn(async () => ({
     { id: "main", name: "main" },
     { id: "dev", name: "dev" },
   ],
+  defaultBranch: "main",
 }))
 
 const mockFetchBranchDiagram = vi.fn(

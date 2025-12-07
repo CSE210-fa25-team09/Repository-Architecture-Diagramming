@@ -32,7 +32,6 @@ type DiagramPanelState = {
   branchId: BranchId
 }
 
-const DEFAULT_DIAGRAMS: DiagramPanelState[] = [{ id: "diagram-1", branchId: "main" }]
 const ADD_PANEL_TRIGGER_ID = "diagram-add-trigger"
 
 export function Diagram() {
@@ -68,7 +67,11 @@ export function Diagram() {
   )
 
   const [branchDetails, setBranchDetails] = useState<BranchLibrary>({} as BranchLibrary)
-  const [panels, setPanels] = useState<DiagramPanelState[]>(DEFAULT_DIAGRAMS)
+  const [panels, setPanels] = useState<DiagramPanelState[]>(() =>
+    workspace?.defaultBranch
+      ? [{ id: "diagram-1", branchId: workspace.defaultBranch }]
+      : [],
+  )
 
   const repoKey = workspace?.repo?.name ?? null
 
@@ -80,7 +83,11 @@ export function Diagram() {
       setCurrentRepoKey(repoKeyFromParam)
       setBranchDetails({} as BranchLibrary)
       setBranches([])
-      setPanels(DEFAULT_DIAGRAMS)
+      setPanels(
+        workspace?.defaultBranch
+          ? [{ id: "diagram-1", branchId: workspace.defaultBranch }]
+          : [],
+      )
       setRepoName(repoKeyFromParam)
       setRepoSummary("")
     }
@@ -108,6 +115,20 @@ export function Diagram() {
   }, [workspace])
 
   // Initialize workspace from ?repo=
+  useEffect(() => {
+    if (!workspace?.defaultBranch) return
+    setPanels((prev) => {
+      if (prev.some((panel) => panel.branchId === workspace.defaultBranch)) return prev
+      if (prev.length === 0) {
+        return [{ id: "diagram-1", branchId: workspace.defaultBranch }]
+      }
+      if (prev.length === 1 && !prev[0].branchId) {
+        return [{ ...prev[0], branchId: workspace.defaultBranch }]
+      }
+      return prev
+    })
+  }, [workspace?.defaultBranch])
+
   useEffect(() => {
     if (!repoParam || !repoKeyFromParam) return
     if (workspace && workspace.repo?.name === repoKeyFromParam) return
