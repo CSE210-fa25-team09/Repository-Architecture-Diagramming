@@ -3,7 +3,7 @@ import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronUp, Loader2 } from "lucide-react"
 import type { Repo } from "@/lib/repoData"
 import { fetchInitialWorkspace } from "@/api/diagram"
 import { useWorkspace } from "@/lib/workspaceContext"
@@ -17,8 +17,21 @@ const ROW_VISIBLE = 4
 
 export function SampleSection({ repos = [], onRepoClick }: SampleSectionProps) {
   const [expanded, setExpanded] = useState(false)
+  const [loadingRepoId, setLoadingRepoId] = useState<string | null>(null)
   const navigate = useNavigate()
-  const { setWorkspaceForRepo, setCurrentRepoKey } = useWorkspace()
+  const { setWorkspaceForRepo, setCurrentRepoKey, workspaceMap } = useWorkspace()
+
+  const repoKeyFromUrl = (url: string) => {
+    try {
+      const parsed = new URL(url)
+      if (parsed.hostname !== "github.com") return null
+      const [owner, repo] = parsed.pathname.replace(/^\/+/, "").split("/")
+      if (owner && repo) return `${owner}/${repo}`.replace(/\/+$/, "")
+      return null
+    } catch {
+      return null
+    }
+  }
 
   if (repos.length === 0) {
     return (
@@ -38,7 +51,17 @@ export function SampleSection({ repos = [], onRepoClick }: SampleSectionProps) {
 
     // Fallback if someone adds a new sample without updating the map
     const identifier = repo.url
+    const repoKey = repoKeyFromUrl(identifier) ?? repo.id
 
+    const cached = repoKey ? workspaceMap[repoKey] : undefined
+    if (cached) {
+      setWorkspaceForRepo(repoKey, cached)
+      setCurrentRepoKey(repoKey)
+      navigate(`/diagram?repo=${encodeURIComponent(identifier)}`)
+      return
+    }
+
+    setLoadingRepoId(repo.id)
     try {
       const ws = await fetchInitialWorkspace(identifier)
       setWorkspaceForRepo(ws.repo.name, ws)
@@ -46,6 +69,8 @@ export function SampleSection({ repos = [], onRepoClick }: SampleSectionProps) {
     } catch (err) {
       // Prefetch failures are logged but navigation still proceeds
       console.error("Failed to prefetch workspace for sample repo", err)
+    } finally {
+      setLoadingRepoId(null)
     }
 
     navigate(`/diagram?repo=${encodeURIComponent(identifier)}`)
@@ -82,7 +107,9 @@ export function SampleSection({ repos = [], onRepoClick }: SampleSectionProps) {
         {primaryRepos.map((repo) => (
           <Card
             key={repo.id}
-            className="h-32 w-full hover:shadow-md transition-shadow cursor-pointer"
+            className={`h-32 w-full hover:shadow-md transition-shadow cursor-pointer ${
+              loadingRepoId === repo.id ? "opacity-60 pointer-events-none" : ""
+            }`}
             onClick={() => handleCardClick(repo)}
           >
             <CardHeader className="space-y-1">
@@ -92,6 +119,12 @@ export function SampleSection({ repos = [], onRepoClick }: SampleSectionProps) {
               <CardDescription className="text-xs text-muted-foreground line-clamp-2">
                 {repo.description}
               </CardDescription>
+              {loadingRepoId === repo.id && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Loading…
+                </div>
+              )}
             </CardHeader>
           </Card>
         ))}
@@ -102,7 +135,9 @@ export function SampleSection({ repos = [], onRepoClick }: SampleSectionProps) {
           {extraRepos.map((repo) => (
             <Card
               key={repo.id}
-              className="h-32 w-full hover:shadow-md transition-shadow cursor-pointer"
+              className={`h-32 w-full hover:shadow-md transition-shadow cursor-pointer ${
+                loadingRepoId === repo.id ? "opacity-60 pointer-events-none" : ""
+              }`}
               onClick={() => handleCardClick(repo)}
             >
               <CardHeader className="space-y-1">
@@ -112,6 +147,12 @@ export function SampleSection({ repos = [], onRepoClick }: SampleSectionProps) {
                 <CardDescription className="text-xs text-muted-foreground line-clamp-2">
                   {repo.description}
                 </CardDescription>
+                {loadingRepoId === repo.id && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Loading…
+                  </div>
+                )}
               </CardHeader>
             </Card>
           ))}

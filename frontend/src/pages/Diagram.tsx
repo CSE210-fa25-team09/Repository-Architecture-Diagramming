@@ -83,7 +83,11 @@ export function Diagram() {
       setCurrentRepoKey(repoKeyFromParam)
       setBranchDetails({} as BranchLibrary)
       setBranches([])
-      setPanels(DEFAULT_DIAGRAMS)
+      setPanels(
+        workspace?.defaultBranch
+          ? [{ id: "diagram-1", branchId: workspace.defaultBranch }]
+          : [],
+      )
       setRepoName(repoKeyFromParam)
       setRepoSummary("")
     }
