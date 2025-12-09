@@ -36,7 +36,7 @@ The mockup is generated using **Codex (LLM)** to bootstrap the initial layout, g
 
 ### 2.3 Search and Repo Input
 
-- Centralized search input field (URL).
+- Centralized search input field (URL or ZIP upload).
 - When the user searches:
   - History and Example sections collapse .
   - Search results occupy the center viewport.
@@ -107,6 +107,7 @@ The mockup is generated using **Codex (LLM)** to bootstrap the initial layout, g
 | Logo badge                                                                 | `Button` (anchor styled as button) or plain div       |
 | Theme toggle                                                               | `Button` (`variant="outline"`, `size="icon"`)         |
 | Primary Button (“Generate Diagram”)                                        | `Button` default variant                              |
+| Secondary/outline buttons (“Upload Zip”, theme toggle, “Home” when needed) | `Button` (`variant="outline"`)                        |
 | Text inputs (URL + Search)                                                 | `Input`                                               |
 | Repo cards                                                                 | `Card`, `CardContent`, `CardTitle`, `CardDescription` |
 

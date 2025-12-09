@@ -20,8 +20,8 @@ Implementation details live in this branch: <https://github.com/CSE210-fa25-team
      - Repo name (GitHub repo title or folder name).
      - Repo “about” text (GitHub description or empty).
      - List of branches.
-     - Diagram + file tree data for the default branch.
-     - `lastGenerated` timestamp for the default branch.
+     - Diagram + file tree data for the main branch.
+     - `lastGenerated` timestamp for the main branch.
    - **Branch switch**:
      - Diagram + file tree for the selected branch.
      - `lastGenerated` timestamp for that branch.
