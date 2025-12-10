@@ -1,5 +1,10 @@
 import * as Sentry from "@sentry/react"
-import {createRoutesFromChildren, matchRoutes, useLocation, useNavigationType} from "react-router-dom"
+import {
+  createRoutesFromChildren,
+  matchRoutes,
+  useLocation,
+  useNavigationType,
+} from "react-router-dom"
 import React from "react"
 
 Sentry.init({

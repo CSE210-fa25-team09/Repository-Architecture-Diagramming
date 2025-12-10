@@ -1,8 +1,10 @@
 import type { MouseEvent } from "react"
-import { GithubIcon, Moon, Sun } from "lucide-react"
+import { Moon, Sun } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
+import IconLight from "@/assets/icon_light.svg"
+import IconDark from "@/assets/icon_dark.svg"
 
 type HeaderProps = {
   isDark: boolean
@@ -25,10 +27,15 @@ export function Header({ isDark, onToggleTheme }: HeaderProps) {
           aria-label="Go to homepage"
           onClick={handleNavigateHome}
         >
-          <GithubIcon className="h-6 w-6" />
+          <img
+            src={isDark ? IconDark : IconLight}
+            alt="DiagAI logo"
+            className="h-8 w-8"
+            aria-hidden
+          />
         </Link>
         <div>
-          <p className="text-[var(--page-foreground)]">SWE Diagramming</p>
+          <p className="text-[var(--page-foreground)]">DiagAI</p>
           <p className="text-[color:var(--muted-text)] text-sm">Repository insights</p>
         </div>
       </div>

@@ -227,7 +227,7 @@ describe("Diagram", () => {
     await screen.findByText(/Mock Diagram:.*main-->llm/)
 
     // Open diagram view dropdown and switch to internal
-    const trigger = screen.getByRole("button", { name: "SWE Graph" })
+    const trigger = screen.getByRole("button", { name: "Architecture Diagram" })
     fireEvent.pointerDown(trigger, { button: 0, pointerType: "mouse" })
     const internal = await screen.findByText("Internal Dependency Graph")
     fireEvent.click(internal)
