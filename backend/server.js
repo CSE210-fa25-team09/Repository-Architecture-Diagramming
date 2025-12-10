@@ -18,9 +18,8 @@ import * as Sentry from "@sentry/node"
 
 Sentry.init({
   dsn: "https://08acb0f98be189573a33a3ada79c7624@o4510504926904320.ingest.us.sentry.io/4510504928673792",
-  integrations: [
-    expressIntegration()
-  ],
+
+  sendDefaultPii: true,
   tracesSampleRate: 1.0,
 })
 
