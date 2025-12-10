@@ -5,6 +5,7 @@ import { SAMPLE_REPOS, type Repo } from "@/lib/repoData"
 import { Input } from "@/components/ui/input"
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import RepositoryInputCard from "@/components/shared/RepositoryInputCard"
+import * as Sentry from "@sentry/react"
 
 const HISTORY_STORAGE_KEY = "repo-history"
 
@@ -25,6 +26,13 @@ export function Home() {
   const [searchInput, setSearchInput] = useState("")
 
   const handleRepoClick = (repo: Repo) => {
+    Sentry.metrics.count("search.repo", 1, {
+      attributes: {
+        repo: repo.name.toLowerCase(),
+        id: repo.id,
+        url: repo.url,
+      },
+    })
     setHistory((prev) => {
       const without = prev.filter((r) => r.id !== repo.id)
       const updated = [repo, ...without]
