@@ -15,13 +15,11 @@ import architectureRouter from './src/routes/architectureAPI.js';
 
 // Sentry for API response tracking
 import * as Sentry from "@sentry/node"
-import { expressIntegration } from "@sentry/node"
 
 Sentry.init({
   dsn: "https://08acb0f98be189573a33a3ada79c7624@o4510504926904320.ingest.us.sentry.io/4510504928673792",
-  integrations: [
-    expressIntegration()
-  ],
+
+  sendDefaultPii: true,
   tracesSampleRate: 1.0,
 })
 
@@ -32,8 +30,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-app.use(Sentry.Handlers.requestHandler());
-app.use(Sentry.Handlers.tracingHandler());
+Sentry.setupExpressErrorHandler(app);
 
 // Request logging
 app.use((req, res, next) => {
@@ -71,8 +68,6 @@ app.use((err, req, res) => {
     message: err.message
   });
 });
-
-app.use(Sentry.Handlers.errorHandler());
 
 // Start server
 app.listen(PORT, () => {
