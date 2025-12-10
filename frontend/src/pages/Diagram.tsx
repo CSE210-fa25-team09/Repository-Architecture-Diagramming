@@ -6,10 +6,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-import { GithubIcon, Plus } from "lucide-react"
+import { Plus } from "lucide-react"
 import { useLocation } from "react-router-dom"
 import { useMemo, useState, useEffect, useCallback } from "react"
 import { useWorkspace } from "@/lib/workspaceContext"
+import IconLight from "@/assets/icon_light.svg"
+import IconDark from "@/assets/icon_dark.svg"
 
 import {
   DiagramPanel,
@@ -439,24 +441,32 @@ export function Diagram() {
   if (!repoParam && !workspace) return <NotFound />
 
   return (
-    <main className="flex flex-1 flex-col gap-10 px-4 pb-12 sm:px-0">
+    <main className="flex flex-1 flex-col gap-6 px-4 pb-10 sm:px-0 sm:gap-10 sm:pb-12">
       <section className="rounded-3xl border border-[color:var(--panel-border)] bg-[color:var(--panel-bg)] shadow-lg">
-        <div className="flex flex-col gap-6 px-6 py-6 sm:px-8 sm:py-8">
+        <div className="flex flex-col gap-6 px-4 py-6 sm:px-8 sm:py-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-            <div className="flex w-full items-center gap-3 sm:w-auto">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)] text-sm font-semibold sm:h-14 sm:w-14">
-                <GithubIcon
-                  className="h-7 w-7 text-[color:var(--page-foreground)]"
+            <div className="flex items-center gap-4 sm:w-auto">
+              <div className="flex h-20 w-20 sm:h-16 sm:w-16 px-2 items-center justify-center rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--page-bg)] text-sm font-semibold">
+                <img
+                  src={IconDark}
+                  alt="Repository icon dark"
+                  className="h-10 w-10 hidden dark:block"
+                  aria-hidden
+                />
+                <img
+                  src={IconLight}
+                  alt="Repository icon light"
+                  className="h-10 w-10 block dark:hidden"
                   aria-hidden
                 />
               </div>
               <div className="text-center text-left">
-                <p data-testid="repo-name" className="text-lg font-semibold">
+                <p data-testid="repo-name" className="text-lg font-semibold sm:text-xl">
                   {repoName}
                 </p>
                 <p
                   data-testid="repo-summary"
-                  className="text-sm text-[color:var(--muted-text)]"
+                  className="text-sm text-[color:var(--muted-text)] sm:text-base"
                 >
                   {repoSummary}
                 </p>
@@ -465,7 +475,7 @@ export function Diagram() {
           </div>
         </div>
 
-        <div className="space-y-6 px-6 pb-10 sm:px-8">
+        <div className="space-y-6 px-4 pb-10 sm:px-8">
           {panels.map((panel) => {
             const branch = branchDetails[panel.branchId] ?? {
               id: panel.branchId,

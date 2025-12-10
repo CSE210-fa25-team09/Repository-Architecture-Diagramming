@@ -113,7 +113,7 @@ export function DiagramPanel({
       ? "Internal Dependency Graph"
       : diagramView === "externalDependency"
         ? "External Dependency Graph"
-        : "SWE Graph"
+        : "Architecture Diagram"
   const diagramDefinition =
     diagramView === "internalDependency"
       ? branch.internalDependencyGraph
@@ -247,7 +247,7 @@ export function DiagramPanel({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[12rem]">
               <DropdownMenuItem onSelect={() => setDiagramView("llmGraph")}>
-                SWE Graph
+                Architecture Diagram
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setDiagramView("internalDependency")}>
                 Internal Dependency Graph

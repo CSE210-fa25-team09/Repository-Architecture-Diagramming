@@ -270,13 +270,13 @@ describe("DiagramPanel", () => {
     it("renders the Mermaid diagram with LLM graph by default", () => {
       setup()
       expect(screen.getByText(/Mock Diagram:.*graph TD; L-->M;/)).toBeInTheDocument()
-      expect(screen.getByText("SWE Graph")).toBeInTheDocument()
+      expect(screen.getByText("Architecture Diagram")).toBeInTheDocument()
     })
 
     it("toggles between LLM, Internal, and External Dependency graphs", async () => {
       const { user } = setup()
 
-      const trigger = screen.getByRole("button", { name: "SWE Graph" })
+      const trigger = screen.getByRole("button", { name: "Architecture Diagram" })
       // Trigger dropdown
       fireEvent.pointerDown(trigger, { button: 0, pointerType: "mouse" })
 
@@ -305,13 +305,13 @@ describe("DiagramPanel", () => {
     it("opens dialog when clicking the diagram trigger", async () => {
       const { user } = setup()
       const diagramTrigger = screen.getByLabelText(
-        "Open enlarged swe graph for feature/login",
+        "Open enlarged architecture diagram for feature/login",
       )
       await user.click(diagramTrigger)
 
       expect(
         screen.getByRole("heading", {
-          name: "feature/login branch swe graph",
+          name: "feature/login branch architecture diagram",
         }),
       ).toBeInTheDocument()
       const dialogContent = screen.getByRole("dialog")

@@ -39,6 +39,7 @@ export default defineConfig({
         "src/tests/**/*.{test,spec}.{ts,tsx}",
         "src/components/ui/**/*",
         "src/main.tsx",
+        "src/telemetry/*",
       ],
     },
   },

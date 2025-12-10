@@ -178,7 +178,7 @@ describe("App", () => {
 
     const [homeLogoLink] = queries.getAllByLabelText(/go to homepage/i)
     expect(homeLogoLink).toBeVisible()
-    expect(queries.getAllByText("SWE Diagramming")[0]).toBeVisible()
+    expect(queries.getAllByText("DiagAI")[0]).toBeVisible()
     const toggleButton = getLatest(
       queries.getAllByRole("button", { name: /toggle color theme/i }),
     )
