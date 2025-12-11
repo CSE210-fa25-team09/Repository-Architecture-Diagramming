@@ -37,6 +37,7 @@ We will use Node.js \+ Express for the backend, with JSON file storage for curat
 * *Node.js*: Async event loop, fits our IO-bound needs, and matches the frontend’s language.  
 * *Hashmap storage*: Due to the characteristics of our backend, we will use in-memory caching (javascript map) for temporary data. This is sufficient as our backend will spin down after 15 minutes of inactivity, so long-term local file storage is not possible
 * *Fetch GitHub data via npm libraries* (@octokit/rest, axios).  
+* *Jest*: Standard testing framework for Node.js; provides a "batteries-included" environment (runner, assertions, mocking) that integrates natively with our backend without requiring the browser-centric tooling of Vitest.
 * *Future expandability*: Modular code to allow addition of LLM endpoints and/or migration to a database if sample/catalog or analytics requirements grow.
 
 How this addresses our needs:
@@ -70,6 +71,12 @@ Vanilla JS (No Framework or Minimal HTTP Module)
 * Pros: Minimal dependencies, ultimate control, lowest possible server overhead.  
 * Cons: Significant effort to correctly handle routing, middleware, error handling, and response formatting; high maintenance burden as complexity grows; lower team velocity.  
 * *Rationale for not choosing*: Express solves all basic routing/REST concerns for you, provides middleware out of the box, and is universally recognized in the JS ecosystem \- starting from scratch adds risk and technical debt for very little gain.
+
+Testing Framework (Vitest)
+
+* *Pros*: Faster execution speed; shares configuration if using Vite for building.
+
+* *Cons*: Primarily designed for frontend/Vite ecosystems. Using it for an Express backend introduces unnecessary tooling complexity when Jest works natively with Node.
 
 ---
 
