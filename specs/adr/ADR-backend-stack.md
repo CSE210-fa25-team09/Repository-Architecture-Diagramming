@@ -35,7 +35,7 @@ We will use Node.js \+ Express for the backend, with JSON file storage for curat
 
 * *Express*: De-facto web API server for Node.js, minimal and flexible, familiar to most contributors.  
 * *Node.js*: Async event loop, fits our IO-bound needs, and matches the frontend’s language.  
-* *JSON file storage for samples*: For 5–10 curated public example diagrams, easily version-controlled and updated.  
+* *Hashmap storage*: Due to the characteristics of our backend, we will use in-memory caching (javascript map) for temporary data. This is sufficient as our backend will spin down after 15 minutes of inactivity, so long-term local file storage is not possible
 * *Fetch GitHub data via npm libraries* (@octokit/rest, axios).  
 * *Future expandability*: Modular code to allow addition of LLM endpoints and/or migration to a database if sample/catalog or analytics requirements grow.
 
